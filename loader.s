@@ -1,4 +1,3 @@
-global _start
 extern kmain
 
 ; Multiboot header
