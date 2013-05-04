@@ -1,3 +1,4 @@
+global _start
 extern kmain
 
 ; Multiboot header
@@ -16,11 +17,11 @@ dd MAGIC
 dd FLAGS
 dd CHECKSUM
 
-loader:
+_start:
 	mov esp, stack+STACKSIZE	; Setup stack pointer to the bottom of the stack
 	call kmain					; Start kernel
 	cli							; Clear interrupts (when kernel exits)
-.halt
+.halt:
 	hlt							; And halt forever
 	jmp .halt
 
