@@ -14,12 +14,18 @@ dd MAGIC
 dd FLAGS
 dd CHECKSUM
 
+gdt dw 0
+	dd 0
+
+idt dw 0
+	dd 0
+
 STACKSIZE	equ 0x4000			; 16k stack size
 
 kernel:
 	mov esp, stack+STACKSIZE	; Setup stack pointer to the bottom of the stack
+	cli							; Disable interrupts until we setup gdt and idt
 	call kmain					; Start kernel
-	cli							; Clear interrupts (when kernel exits)
 .halt:
 	hlt
 	jmp .halt
