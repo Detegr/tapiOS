@@ -45,8 +45,12 @@ void setup_interrupts(void)
 {
 	gdt_t gdt;
 	idt_t idt;
+	printk("Setting up GDT...");
 	setgdt(&gdt, sizeof(gdt));
+	printk("OK!\n");
+	printk("Setting up IDT...");
 	setidt(&idt, sizeof(idt));
+	printk("OK!\n");
 }
 
 void kmain(unsigned long magic, unsigned long addr)
