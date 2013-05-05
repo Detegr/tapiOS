@@ -3,6 +3,19 @@ volatile unsigned char* video = (unsigned char*)0xB8000;
 static unsigned char row=0;
 static unsigned char line=0;
 
+void cls(void)
+{
+	int x,y;
+	for(x=0; x<0xA0; ++x)
+	{
+		for(y=0; y<0x32; ++y)
+		{
+			*(video+(y*0xA0)+x)=0;
+			*(video+(y*0xA0)+x+1)=0;
+		}
+	}
+}
+
 void printk(const char* str)
 {
 	const char* s;
@@ -28,6 +41,6 @@ void printk(const char* str)
 
 void kmain(unsigned long magic, unsigned long addr)
 {
+	cls();
 	printk("Welcome to tapiOS!\n");
-	printk("You will be able to do...nothing!\n");
 }

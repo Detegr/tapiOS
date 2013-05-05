@@ -18,7 +18,6 @@ STACKSIZE	equ 0x4000			; 16k stack size
 
 kernel:
 	mov esp, stack+STACKSIZE	; Setup stack pointer to the bottom of the stack
-	mov dword [0xb8000], 0x0	; Initializes video memory
 	call kmain					; Start kernel
 	cli							; Clear interrupts (when kernel exits)
 .halt:
