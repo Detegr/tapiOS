@@ -1,9 +1,8 @@
-;global kernel
 extern kmain
 
 ; Multiboot header
-MODULEALIGN equ 0x1					; Align modules on page boundaries
-MEMINFO		equ 0x2					; Information on available memory must be included
+MODULEALIGN equ 0x1				; Align modules on page boundaries
+MEMINFO		equ 0x2				; Information on available memory must be included
 FLAGS		equ MODULEALIGN|MEMINFO
 MAGIC		equ 0x1BADB002			; Multiboot header magic
 CHECKSUM	equ 0-(MAGIC + FLAGS)
