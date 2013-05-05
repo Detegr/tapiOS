@@ -55,7 +55,7 @@ void setup_interrupts(void)
 
 void kmain(unsigned long magic, unsigned long addr)
 {
-	setup_interrupts();
 	cls();
+	setup_interrupts();
 	printk("Welcome to tapiOS!\n");
 }
