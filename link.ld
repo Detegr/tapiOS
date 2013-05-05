@@ -5,14 +5,21 @@ OUTPUT(kernel.bin)
 SECTIONS
 {
 	. = 0x100000; /* Multiboot kernel must not start before 1mb mark */
-	.text : ALIGN(0x1000) { /* Align sections at page boundaries */
+	.text ALIGN(4096) :
+	{
 		*(.text)
 	}
-	.data : ALIGN(0x1000) {
+	.rodata ALIGN(4096) :
+	{
+		*(.rodata*)
+	}
+	.data ALIGN(4096) :
+	{
 		*(.data)
 	}
-
-	.bss : ALIGN(0x1000) {
+	.bss :
+	{
+		*(COMMON)
 		*(.bss)
 	}
 }
