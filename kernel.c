@@ -41,21 +41,22 @@ void printk(const char* str)
 	}
 }
 
-void setup_interrupts(void)
+void setup_gdt(void)
 {
-	gdt_t gdt;
-	idt_t idt;
 	printk("Setting up GDT...");
-	setgdt(&gdt, sizeof(gdt));
-	printk("OK!\n");
-	printk("Setting up IDT...");
-	setidt(&idt, sizeof(idt));
+	gdtentry(0, 0, 0, 0, 0); // null descriptor
+	// Flat memory setup
+	gdtentry(1, 0, 0xFFFFFFFF, 0x9A, 0x0F); // 0x9A == read only (code segment)
+	gdtentry(2, 0, 0xFFFFFFFF, 0x92, 0x0F); // 0x92 == readwrite (data segment)
+	gdtptr.size=sizeof(gdt);
+	gdtptr.base=(unsigned int)&gdt;
+	setgdt();
 	printk("OK!\n");
 }
 
 void kmain(unsigned long magic, unsigned long addr)
 {
 	cls();
-	setup_interrupts();
+	setup_gdt();
 	printk("Welcome to tapiOS!\n");
 }

@@ -1,12 +1,23 @@
 #include <stdint.h>
 
-typedef struct gdt
+struct gdt_entry
 {
-}__attribute__((packed)) gdt_t;
+	unsigned short limit_low;
+	unsigned short base_low;
+	unsigned char base_mid;
+	unsigned char access;
+	unsigned char limit_and_flags;
+	unsigned char base_hi;
+}__attribute__((packed));
 
-typedef struct idt
+struct gdt_ptr
 {
-}__attribute__((packed)) idt_t;
+	unsigned short size;
+	unsigned int base;
+}__attribute__((packed));
 
-void setgdt(gdt_t* gdt, uint16_t gdtsize);
-void setidt(idt_t* idt, uint16_t idtsize);
+struct gdt_entry gdt[3];
+struct gdt_ptr gdtptr;
+
+void gdtentry(int n, unsigned int base, unsigned int limit, unsigned char access, unsigned char flags);
+void setgdt();
