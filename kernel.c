@@ -46,8 +46,8 @@ void setup_gdt(void)
 	printk("Setting up GDT...");
 	gdtentry(0, 0, 0, 0, 0); // null descriptor
 	// Flat memory setup
-	gdtentry(1, 0, 0xFFFFFFFF, 0x9A, 0x0F); // 0x9A == read only (code segment)
-	gdtentry(2, 0, 0xFFFFFFFF, 0x92, 0x0F); // 0x92 == readwrite (data segment)
+	gdtentry(1, 0, 0xFFFFFFFF, 0x9A, 0x0F); // 0x9A == read only (code segment), flags: 4kb blocks, 32 bit protected mode (0x0F)
+	gdtentry(2, 0, 0xFFFFFFFF, 0x92, 0x0F); // 0x92 == readwrite (data segment), flags: 4kb blocks, 32 bit protected mode (0x0F)
 	gdtptr.size=sizeof(gdt);
 	gdtptr.base=(unsigned int)&gdt;
 	setgdt();
