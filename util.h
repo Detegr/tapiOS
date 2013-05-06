@@ -1,5 +1,8 @@
 #include <stdint.h>
 
+#define CODE_SELECTOR 0x08
+#define DATA_SELECTOR 0x10
+
 struct gdt_entry
 {
 	unsigned short limit_low;
