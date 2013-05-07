@@ -1,5 +1,8 @@
 global setgdt
+global setidt
+
 extern gdtptr
+extern idtptr
 
 section .text
 
@@ -15,9 +18,6 @@ flushgdt:
 	mov ss,ax
 	ret
 
-;setidt:
-;	mov eax, [esp+4]
-;	mov [idt+2], eax
-;	mov ax, [esp+8]
-;	mov [idt], ax
-;	lidt [idt]
+setidt:
+	lidt [idtptr]
+	ret
