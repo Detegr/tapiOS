@@ -1,6 +1,7 @@
 global _setgdt
 global _setidt
 global _outb
+global _io_wait
 
 extern gdtptr
 extern idtptr
