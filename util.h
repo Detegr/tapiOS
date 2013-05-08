@@ -41,4 +41,5 @@ struct gdt_ptr gdtptr;
 struct idt_ptr idtptr;
 
 void gdtentry(int n, unsigned int base, unsigned int limit, unsigned char access, unsigned char flags);
-void setgdt();
+void _setgdt();
+void _setidt();
