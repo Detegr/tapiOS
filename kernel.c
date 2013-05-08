@@ -50,7 +50,7 @@ void setup_gdt(void)
 	gdtentry(2, 0, 0xFFFFFFFF, 0x92, 0x0F); // 0x92 == readwrite (data segment), flags: 4kb blocks, 32 bit protected mode (0x0F)
 	gdtptr.size=sizeof(gdt);
 	gdtptr.base=(unsigned int)&gdt;
-	setgdt();
+	_setgdt();
 	printk("OK!\n");
 }
 
@@ -58,5 +58,6 @@ void kmain(unsigned long magic, unsigned long addr)
 {
 	cls();
 	setup_gdt();
+	_setidt();
 	printk("Welcome to tapiOS!\n");
 }

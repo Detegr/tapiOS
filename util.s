@@ -1,12 +1,13 @@
-global setgdt
-global setidt
+global _setgdt
+global _setidt
+global _outb
 
 extern gdtptr
 extern idtptr
 
 section .text
 
-setgdt:
+_setgdt:
 	lgdt [gdtptr]
 	jmp 0x08:flushgdt ; 0x08 is our new code selector in gdt
 flushgdt:
@@ -18,6 +19,12 @@ flushgdt:
 	mov ss,ax
 	ret
 
-setidt:
+_setidt:
 	lidt [idtptr]
+	ret
+
+_outb:
+	mov eax, [esp+8]
+	mov dx, [esp+4]
+	out dx, eax
 	ret
