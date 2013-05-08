@@ -28,3 +28,7 @@ _outb:
 	mov dx, [esp+4]
 	out dx, eax
 	ret
+
+_io_wait:
+	mov eax, 0x3A4 ; 0x3A4 should be unused
+	out 0x0, eax
