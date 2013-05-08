@@ -41,5 +41,10 @@ struct gdt_ptr gdtptr;
 struct idt_ptr idtptr;
 
 void gdtentry(int n, unsigned int base, unsigned int limit, unsigned char access, unsigned char flags);
-void _setgdt();
-void _setidt();
+void remap_pic(void);
+
+void _setgdt(void);
+void _setidt(void);
+
+void _outb(uint8_t dest, uint16_t src);
+void _io_wait(void);

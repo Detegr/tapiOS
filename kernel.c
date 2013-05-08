@@ -61,10 +61,18 @@ void setup_idt(void)
 	printk("OK!\n");
 }
 
+void setup_pic(void)
+{
+	printk("Remapping PIC...");
+	remap_pic();
+	printk("OK!\n");
+}
+
 void kmain(unsigned long magic, unsigned long addr)
 {
 	cls();
 	setup_gdt();
 	setup_idt();
+	setup_pic();
 	printk("Welcome to tapiOS!\n");
 }

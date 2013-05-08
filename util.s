@@ -1,5 +1,7 @@
 global _setgdt
 global _setidt
+global _outb
+global _io_wait
 
 extern gdtptr
 extern idtptr
@@ -20,4 +22,15 @@ flushgdt:
 
 _setidt:
 	lidt [idtptr]
+	ret
+
+_outb:
+	mov eax, [esp+8]
+	mov dx, [esp+4]
+	out dx, eax
+	ret
+
+_io_wait:
+	mov eax, 0x0
+	out 0x3A4, eax ; 0x3A4 should be unused
 	ret
