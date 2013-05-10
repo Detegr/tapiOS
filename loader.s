@@ -26,8 +26,9 @@ kernel:
 	mov esp, stack+STACKSIZE	; Setup stack pointer to the bottom of the stack
 	cli							; Disable interrupts until we setup gdt and idt
 	call kmain					; Start kernel
+	cli							; Clear interrupts if kernel exists
 .halt:
-	hlt
+	hlt							; ..and halt.
 	jmp .halt
 
 section .bss align = 4

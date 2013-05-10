@@ -1,7 +1,20 @@
+#ifndef _TAPIOS_UTIL_H
+#define _TAPIOS_UTIL_H
+
 #include <stdint.h>
 
+// GDT selectors
 #define CODE_SELECTOR 0x08
 #define DATA_SELECTOR 0x10
+
+// Interrupt types
+#define GATE_INT32 0x8E
+
+extern void _spurious_irq_check_master(void);
+extern void _spurious_irq_check_slave(void);
+extern void _kb_int(void);
+extern void _noop_int(void);
+extern void _idle(void);
 
 struct gdt_entry
 {
@@ -24,27 +37,34 @@ struct idt_entry
 
 struct gdt_ptr
 {
-	unsigned short size;
+	unsigned short limit;
 	unsigned int base;
 }__attribute__((packed));
 
 struct idt_ptr
 {
-	unsigned short size;
+	unsigned short limit;
 	unsigned int base;
 }__attribute__((packed));
 
 struct gdt_entry gdt[3];
-struct idt_entry idt[255];
+struct idt_entry idt[256];
 
 struct gdt_ptr gdtptr;
 struct idt_ptr idtptr;
 
 void gdtentry(int n, unsigned int base, unsigned int limit, unsigned char access, unsigned char flags);
+void idtentry(int n, uint32_t offset, uint16_t selector, uint8_t type);
 void remap_pic(void);
 
-void _setgdt(void);
-void _setidt(void);
+uint8_t inb(uint16_t port);
 
-void _outb(uint8_t dest, uint16_t src);
-void _io_wait(void);
+void _setgdt();
+void _setidt();
+
+uint8_t is_spurious_irq_master(void);
+uint8_t is_spurious_irq_slave(void);
+void outb(uint8_t src, uint16_t port);
+uint8_t pic_get_irq(void);
+
+#endif
