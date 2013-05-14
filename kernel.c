@@ -1,46 +1,5 @@
 #include "util.h"
-
-volatile unsigned char* video = (unsigned char*)0xB8000;
-
-static unsigned char row=0;
-static unsigned char line=0;
-
-void cls(void)
-{
-	int x,y;
-	for(x=0; x<0xA0; ++x)
-	{
-		for(y=0; y<0x32; ++y)
-		{
-			*(video+(y*0xA0)+x)=0;
-			*(video+(y*0xA0)+x+1)=0;
-		}
-	}
-	row=line=0;
-}
-
-void printk(const char* str)
-{
-	const char* s;
-	for(s=str; *s; s++)
-	{
-		char c=*s;
-		if(c=='\n')
-		{
-			row=0;
-			line++;
-			continue;
-		}
-		*(video+(line*0xA0)+row)=c;
-		*(video+(line*0xA0)+row+1)=0x07; // Gray on black
-		row+=2;
-		if(row>=0xA0)
-		{
-			row=0;
-			line++;
-		}
-	}
-}
+#include "video.h"
 
 void setup_gdt(void)
 {
@@ -67,6 +26,7 @@ void setup_idt(void)
 		else if(i==0x2F) idtentry(i, (uint32_t)&_spurious_irq_check_slave, CODE_SELECTOR, GATE_INT32);
 		else idtentry(i, (uint32_t)0, 0, 0);
 	}
+	idtentry(0x21, (uint32_t)&_kb_int, CODE_SELECTOR, GATE_INT32);
 	idtptr.limit=sizeof(idt)-1;
 	idtptr.base=(unsigned int)&idt;
 	_setidt();

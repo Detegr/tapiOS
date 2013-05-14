@@ -1,10 +1,20 @@
-all:
-	nasm -f elf -o loader.o loader.s
-	nasm -f elf -o util_asm.o util.s
-	gcc -g3 -o kernel.o -c kernel.c -Wall -Wextra -Werror -nostdlib -nostartfiles -nodefaultlibs -Wno-unused-parameter -m32 -ffreestanding
-	gcc -g3 -o util.o -c util.c -Wall -Wextra -Werror -nostdlib -nostartfiles -nodefaultlibs -Wno-unused-parameter -m32 -ffreestanding
-	ld -T link.ld kernel.o util.o util_asm.o loader.o -o tapios/boot/kernel.bin -melf_i386
+OBJECTS=loader.o util_asm.o kernel.o util.o video.o
+CFLAGS=-Wall -Wextra -Werror -nostdlib -nostartfiles -nodefaultlibs -Wno-unused-parameter -m32 -ffreestanding
+ASM_FLAGS=-f elf
+
+all: kernel
+
+kernel: $(OBJECTS)
+	ld -T link.ld $(OBJECTS) -o tapios/boot/kernel.bin -melf_i386
 	grub-mkrescue -o tapios.iso tapios
+
+%.o : %.c %.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+%.o : %.s
+	nasm $(ASM_FLAGS) $< -o $@
 
 clean:
 	-rm *.o tapios/boot/*.bin
+
+.PHONY: all clean
