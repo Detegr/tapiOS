@@ -64,7 +64,7 @@ void _setidt();
 
 uint8_t is_spurious_irq_master(void);
 uint8_t is_spurious_irq_slave(void);
-void outb(uint8_t src, uint16_t port);
+inline void outb(uint16_t port, uint8_t src);
 uint8_t pic_get_irq(void);
 
 #endif

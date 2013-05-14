@@ -30,9 +30,9 @@ void idtentry(int n, uint32_t offset, uint16_t selector, uint8_t type)
 	ie->type_and_attr = type;
 }
 
-void outb(uint8_t src, uint16_t port)
+inline void outb(uint16_t port, uint8_t src)
 {
-	_outb(src, port);
+	_outb(port, src);
 }
 
 #define PIC1 0x20
@@ -61,7 +61,7 @@ void remap_pic(void)
 	outb(PIC1_DATA, 0xFD);
 	outb(PIC2_DATA, 0xFF);
 
-	__asm__("sti\n");
+	__asm__ __volatile__("sti\n");
 }
 
 uint8_t inb(uint16_t port)

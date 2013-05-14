@@ -49,7 +49,7 @@ void setup_gdt(void)
 	// Flat memory setup
 	gdtentry(1, 0, 0xFFFFFFFF, 0x9A, 0x0F); // 0x9A == read only (code segment), flags: 4kb blocks, 32 bit protected mode (0x0F)
 	gdtentry(2, 0, 0xFFFFFFFF, 0x92, 0x0F); // 0x92 == readwrite (data segment), flags: 4kb blocks, 32 bit protected mode (0x0F)
-	gdtptr.limit=(3*sizeof(struct gdt_entry))-1;
+	gdtptr.limit=sizeof(gdt)-1;
 	gdtptr.base=(unsigned int)&gdt;
 	_setgdt();
 	printk("OK!\n");
@@ -67,7 +67,7 @@ void setup_idt(void)
 		else if(i==0x2F) idtentry(i, (uint32_t)&_spurious_irq_check_slave, CODE_SELECTOR, GATE_INT32);
 		else idtentry(i, (uint32_t)0, 0, 0);
 	}
-	idtptr.limit=(256*sizeof(struct idt_entry))-1;
+	idtptr.limit=sizeof(idt)-1;
 	idtptr.base=(unsigned int)&idt;
 	_setidt();
 	printk("OK!\n");
