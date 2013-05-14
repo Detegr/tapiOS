@@ -55,16 +55,17 @@ struct idt_ptr idtptr;
 
 void gdtentry(int n, unsigned int base, unsigned int limit, unsigned char access, unsigned char flags);
 void idtentry(int n, uint32_t offset, uint16_t selector, uint8_t type);
-void remap_pic(void);
 
 uint8_t inb(uint16_t port);
 
-void _setgdt();
-void _setidt();
+void _setgdt(void);
+void _setidt(void);
 
 uint8_t is_spurious_irq_master(void);
 uint8_t is_spurious_irq_slave(void);
 inline void outb(uint16_t port, uint8_t src);
-uint8_t pic_get_irq(void);
+uint8_t inb(uint16_t port);
+
+void panic(void);
 
 #endif

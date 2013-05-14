@@ -1,11 +1,12 @@
-OBJECTS=loader.o util_asm.o kernel.o util.o video.o
+OBJECTS=loader.o util_asm.o irq_asm.o irq.o util.o video.o kernel.o
 CFLAGS=-Wall -Wextra -Werror -nostdlib -nostartfiles -nodefaultlibs -Wno-unused-parameter -m32 -ffreestanding
 ASM_FLAGS=-f elf
+LFLAGS=-melf_i386
 
 all: kernel
 
 kernel: $(OBJECTS)
-	ld -T link.ld $(OBJECTS) -o tapios/boot/kernel.bin -melf_i386
+	ld -T link.ld $(OBJECTS) -o tapios/boot/kernel.bin $(LFLAGS)
 	grub-mkrescue -o tapios.iso tapios
 
 %.o : %.c %.h

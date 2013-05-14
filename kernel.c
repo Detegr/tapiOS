@@ -1,5 +1,6 @@
 #include "util.h"
 #include "video.h"
+#include "irq.h"
 
 void setup_gdt(void)
 {
@@ -14,43 +15,11 @@ void setup_gdt(void)
 	printk("OK!\n");
 }
 
-void setup_idt(void)
-{
-	printk("Setting up IDT...");
-	int i;
-	for(i=0; i<255; ++i)
-	{
-		if(i<=0x1F) idtentry(i, (uint32_t)&_noop_int, CODE_SELECTOR, GATE_INT32);
-		else if(i==0x21) idtentry(i, (uint32_t)&_kb_int, CODE_SELECTOR, GATE_INT32);
-		else if(i==0x27) idtentry(i, (uint32_t)&_spurious_irq_check_master, CODE_SELECTOR, GATE_INT32);
-		else if(i==0x2F) idtentry(i, (uint32_t)&_spurious_irq_check_slave, CODE_SELECTOR, GATE_INT32);
-		else idtentry(i, (uint32_t)0, 0, 0);
-	}
-	idtentry(0x21, (uint32_t)&_kb_int, CODE_SELECTOR, GATE_INT32);
-	idtptr.limit=sizeof(idt)-1;
-	idtptr.base=(unsigned int)&idt;
-	_setidt();
-	printk("OK!\n");
-}
-
 void setup_pic(void)
 {
 	printk("Remapping PIC...");
-	remap_pic();
+	remap_pic(0x20, 0x28);
 	printk("OK!\n");
-}
-
-void test(void)
-{
-	printk("Interrupt test!\n");
-	inb(0x60);
-	uint8_t i=inb(0x61);
-	outb(0x61, i);
-}
-
-void panic(void)
-{
-	printk("Kernel panic, halting!\n");
 }
 
 void kmain(unsigned long magic, unsigned long addr)
