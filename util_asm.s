@@ -51,6 +51,5 @@ _idle:
 	ret
 
 _panic:
-	call panic
 	cli
 	hlt

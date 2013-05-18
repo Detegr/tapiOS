@@ -1,6 +1,8 @@
 #include "util.h"
 #include "video.h"
 #include "irq.h"
+#include "pmm.h"
+#include "vmm.h"
 
 void setup_gdt(void)
 {
@@ -22,13 +24,36 @@ void setup_pic(void)
 	printk("OK!\n");
 }
 
-void kmain(unsigned long magic, unsigned long addr)
+physptr_t* testalloc(void)
+{
+	physptr_t* pf=kalloc_page_frame();
+	printk("Allocated: ");
+	printix((uint32_t) pf);
+	printk("\n");
+	return pf;
+}
+
+void testfree(physptr_t* ptr)
+{
+	kfree_page_frame(ptr);
+	printk("Freed ");
+	printix((uint32_t) ptr);
+	printk("\n");
+}
+
+void kmain(void)
 {
 	cls();
 	setup_gdt();
 	setup_idt();
 	setup_pic();
+	setup_bitmap();
+	setup_vmm();
 	printk("Welcome to tapiOS!\n");
+
+	testfree(testalloc());
+	kalloc_page(0);
+
 	while(1)
 	{
 		//__asm__("int $0x21\n");

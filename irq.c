@@ -1,6 +1,7 @@
 #include "irq.h"
 
-extern int _irq1_handler(void);
+extern void _irq1_handler(void);
+extern void _page_fault(void);
 
 void irq1_handler(void)
 {
@@ -9,6 +10,11 @@ void irq1_handler(void)
 	uint8_t i=inb(0x61);
 	outb(0x61, i);
 }
+void page_fault(void)
+{
+	printk("Page fault!\n");
+	panic();
+}
 
 void setup_idt(void)
 {
@@ -16,12 +22,14 @@ void setup_idt(void)
 	int i;
 	for(i=0; i<255; ++i)
 	{
-		if(i<=0x1F) idtentry(i, (uint32_t)&_noop_int, CODE_SELECTOR, GATE_INT32);
-		else if(i==0x21) idtentry(i, (uint32_t)&_irq1_handler, CODE_SELECTOR, GATE_INT32);
-		else if(i==0x27) idtentry(i, (uint32_t)&_spurious_irq_check_master, CODE_SELECTOR, GATE_INT32);
-		else if(i==0x2F) idtentry(i, (uint32_t)&_spurious_irq_check_slave, CODE_SELECTOR, GATE_INT32);
-		else idtentry(i, (uint32_t)0, 0, 0);
+		idtentry(i, (uint32_t)&_noop_int, CODE_SELECTOR, GATE_INT32);
 	}
+
+	idtentry(0x0E, (uint32_t)&_page_fault, CODE_SELECTOR, TRAP_INT32);
+	idtentry(0x21, (uint32_t)&_irq1_handler, CODE_SELECTOR, GATE_INT32);
+	idtentry(0x27, (uint32_t)&_spurious_irq_check_master, CODE_SELECTOR, GATE_INT32);
+	idtentry(0x2F, (uint32_t)&_spurious_irq_check_slave, CODE_SELECTOR, GATE_INT32);
+
 	idtptr.limit=sizeof(idt)-1;
 	idtptr.base=(unsigned int)&idt;
 	_setidt();

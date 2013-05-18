@@ -1,25 +1,38 @@
 OUTPUT_FORMAT(elf32-i386)
-STARTUP(loader.o)
 OUTPUT(kernel.bin)
+ENTRY(_start)
 
 SECTIONS
 {
+	VIRTUAL_BASE = 0xC0000000;
+
 	. = 0x100000; /* Multiboot kernel must not start before 1mb mark */
-	.text ALIGN(4096) :
+	.setup : /* Link setup to 1mb so we can get a linear address for initial GDT */
+	{
+		*(.setup)
+	}
+
+	__kernel_start = .;
+	. += VIRTUAL_BASE;
+
+	.text : AT(ADDR(.text) - VIRTUAL_BASE)
 	{
 		*(.text)
 	}
-	.rodata ALIGN(4096) :
-	{
-		*(.rodata*)
-	}
-	.data ALIGN(4096) :
+	.data ALIGN(4096) : AT(ADDR(.data) - VIRTUAL_BASE)
 	{
 		*(.data)
+		*(.rodata*)
 	}
-	.bss :
+	.eh_frame ALIGN(4096) : AT(ADDR(.eh_frame) - VIRTUAL_BASE)
 	{
-		*(COMMON)
-		*(.bss)
+		*(.eh_frame);
+		*(.rel_eh_frame);
 	}
+	.bss ALIGN(4096) : AT(ADDR(.bss) - VIRTUAL_BASE)
+	{
+		*(COMMON*)
+		*(.bss*)
+	}
+	__kernel_end = .;
 }

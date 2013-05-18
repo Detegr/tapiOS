@@ -2,6 +2,9 @@
 #define _TAPIOS_UTIL_H
 
 #include <stdint.h>
+#include <stdbool.h>
+
+#define NULL (void*)0x0
 
 // GDT selectors
 #define CODE_SELECTOR 0x08
@@ -9,6 +12,7 @@
 
 // Interrupt types
 #define GATE_INT32 0x8E
+#define TRAP_INT32 0x8F
 
 extern void _spurious_irq_check_master(void);
 extern void _spurious_irq_check_slave(void);
@@ -63,7 +67,7 @@ void _setidt(void);
 
 uint8_t is_spurious_irq_master(void);
 uint8_t is_spurious_irq_slave(void);
-inline void outb(uint16_t port, uint8_t src);
+void outb(uint16_t port, uint8_t src);
 uint8_t inb(uint16_t port);
 
 void panic(void);

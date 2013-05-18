@@ -19,6 +19,7 @@ extern is_spurious_irq_slave
 extern pic_get_irq
 
 IRQ_HANDLER _irq1_handler, irq1_handler
+IRQ_HANDLER _page_fault, page_fault
 
 send_eoi:
 	cmp al, 0xFF
