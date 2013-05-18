@@ -1,5 +1,12 @@
 extern kmain
 
+; Paging stuff
+KERNEL_VMA equ 0xC0000000
+PAGE_ENTRIES equ 1024
+
+; From paging.s
+extern _enable_paging
+
 ; Multiboot header
 MODULEALIGN equ 0x1				; Align modules on page boundaries
 MEMINFO		equ 0x2				; Information on available memory must be included
@@ -14,13 +21,16 @@ dd MAGIC
 dd FLAGS
 dd CHECKSUM
 
-gdt dw 0
-	dd 0
-
-idt dw 0
-	dd 0
+page_directory:
+	times PAGE_ENTRIES dd 0
+page_tbl_low:
+	times PAGE_ENTRIES dd 0
+page_tbl_kernel:
+	times PAGE_ENTRIES dd 0
 
 STACKSIZE	equ 0x4000			; 16k stack size
+
+_start:
 
 kernel:
 	mov esp, stack+STACKSIZE	; Setup stack pointer to the bottom of the stack

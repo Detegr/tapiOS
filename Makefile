@@ -1,4 +1,4 @@
-OBJECTS=loader.o util_asm.o irq_asm.o irq.o util.o video.o kernel.o
+OBJECTS=paging.o loader.o util_asm.o irq_asm.o irq.o util.o video.o kernel.o
 CFLAGS=-Wall -Wextra -Werror -nostdlib -nostartfiles -nodefaultlibs -Wno-unused-parameter -m32 -ffreestanding
 ASM_FLAGS=-f elf
 LFLAGS=-melf_i386
