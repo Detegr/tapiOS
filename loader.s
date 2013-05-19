@@ -49,14 +49,14 @@ _map_kernel_to_higher_half:
 	pop ecx                                ; page_tbl_kernel
 	call _setup_page_table
 
-										   ; Map low page (0x1000 - 0x400000)
+										   ; Identity map first 4mb
 	                                       ; eax contains page_directory
 	mov ebx, 0x0                           ; virtual
 	mov ecx, 1024                          ; count
 	mov edx, 0x0                           ; physical
 	call _map_page
 
-										   ; Map kernel (0x1000 - 0x400000) -> (0xC0000000 - 0xC0400000)
+										   ; Map kernel 0mb - 4mb to 0xC0000000
 	mov ebx, 0xC0000000                    ; virtual
 	mov ecx, 1024                          ; count
 	mov edx, 0x0                           ; physical
