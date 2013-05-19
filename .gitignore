@@ -1,0 +1,6 @@
+*.o
+tapios/
+kernel
+.gdbinit
+a.out
+*.iso
