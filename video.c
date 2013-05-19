@@ -1,6 +1,6 @@
 #include "video.h"
 
-volatile unsigned char* video = (unsigned char*)0xB8000;
+volatile unsigned char* video = (unsigned char*)0xC00B8000;
 
 static unsigned char row=0;
 static unsigned char line=0;
