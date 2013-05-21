@@ -9,6 +9,7 @@
 
 // Interrupt types
 #define GATE_INT32 0x8E
+#define TRAP_INT32 0x8F
 
 extern void _spurious_irq_check_master(void);
 extern void _spurious_irq_check_slave(void);
