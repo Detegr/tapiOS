@@ -1,6 +1,5 @@
 global _start
 extern kmain
-
                                            ; Paging stuff
 KERNEL_VMA equ 0xC0000000
 PAGE_ENTRIES equ 1024
