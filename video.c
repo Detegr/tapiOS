@@ -42,4 +42,4 @@ void printkc(const char* str, uint8_t color)
 	}
 }
 
-inline void printk(const char* str) { printkc(str, 0x07); }
+void printk(const char* str) { printkc(str, 0x07); }

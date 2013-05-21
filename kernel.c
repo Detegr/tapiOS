@@ -1,6 +1,7 @@
 #include "util.h"
 #include "video.h"
 #include "irq.h"
+#include "paging.h"
 
 void setup_gdt(void)
 {
@@ -25,6 +26,7 @@ void setup_pic(void)
 void kmain(unsigned long magic, unsigned long addr)
 {
 	cls();
+	//setup_paging();
 	setup_gdt();
 	setup_idt();
 	setup_pic();

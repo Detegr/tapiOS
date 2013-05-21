@@ -8,13 +8,6 @@ KERNEL_VMA equ 0xC0000000
 FLAG_PRESENT equ 0x1
 FLAG_READWRITE equ 0x2
 
-extern page_directory
-extern page_tbl_low
-extern page_tbl_kernel
-
-extern __kernel_start
-extern __kernel_end
-
 _setup_page_table:
 	push eax
 	mov eax, ebx

@@ -63,7 +63,7 @@ void _setidt(void);
 
 uint8_t is_spurious_irq_master(void);
 uint8_t is_spurious_irq_slave(void);
-inline void outb(uint16_t port, uint8_t src);
+void outb(uint16_t port, uint8_t src);
 uint8_t inb(uint16_t port);
 
 void panic(void);

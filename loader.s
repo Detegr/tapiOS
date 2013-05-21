@@ -1,4 +1,5 @@
 global _start
+global _page_tbl_kernel
 extern kmain
                                            ; Paging stuff
 KERNEL_VMA equ 0xC0000000
@@ -31,7 +32,7 @@ _start:
 	sub esp, KERNEL_VMA                    ; Correct to the physical address of the stack
 	mov ebp, esp
 
-	push page_tbl_kernel - KERNEL_VMA
+	push _page_tbl_kernel - KERNEL_VMA
 	push page_tbl_low - KERNEL_VMA
 	push page_directory - KERNEL_VMA
 
@@ -83,5 +84,5 @@ page_directory:
 	times PAGE_ENTRIES dd 0
 page_tbl_low:
 	times PAGE_ENTRIES dd 0
-page_tbl_kernel:
+_page_tbl_kernel:
 	times PAGE_ENTRIES dd 0
