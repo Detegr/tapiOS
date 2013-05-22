@@ -11,5 +11,6 @@ uint32_t bitmap[BITMAP_SIZE];
 void setup_bitmap(void);
 bool is_free_page(physaddr_t addr);
 physptr_t* kalloc_page_frame();
+void kfree_page_frame(void);
 
 #endif

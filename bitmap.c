@@ -38,3 +38,22 @@ physptr_t* kalloc_page_frame(void)
 	}
 	return NULL;
 }
+
+void kfree_page_frame(void)
+{
+	for(int i=BITMAP_SIZE-1; i>=0; --i)
+	{
+		if(bitmap[i] != 0xFFFFFFFF)
+		{
+			for(int bit=0, j=31; bit<=31; bit++, j--)
+			{
+				if(i<=32) return; // Prevent freeing <4mb area
+				if(((bitmap[i] >> bit) & 0x1) != 0)
+				{
+					bitmap[i] ^= 1<<(31-j);
+					return;
+				}
+			}
+		}
+	}
+}

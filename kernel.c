@@ -31,6 +31,39 @@ void kmain(void)
 	setup_pic();
 	setup_bitmap();
 	printk("Welcome to tapiOS!\n");
+
+	physptr_t* pf=kalloc_page_frame();
+	printk("Allocated: ");
+	printix((uint32_t) pf);
+	printk("\nFreed\n");
+	pf=kalloc_page_frame();
+	printix((uint32_t) pf);
+	printk("Allocated: ");
+	printix((uint32_t) pf);
+	printk("\n");
+
+	pf=kalloc_page_frame();
+	printix((uint32_t) pf);
+	printk("Allocated: ");
+	printix((uint32_t) pf);
+	printk("\n");
+
+	pf=kalloc_page_frame();
+	printix((uint32_t) pf);
+	printk("Allocated: ");
+	printix((uint32_t) pf);
+	printk("\n");
+
+	kfree_page_frame();
+	kfree_page_frame();
+	kfree_page_frame();
+
+	pf=kalloc_page_frame();
+	printix((uint32_t) pf);
+	printk("Allocated: ");
+	printix((uint32_t) pf);
+	printk("\n");
+
 	while(1)
 	{
 		//__asm__("int $0x21\n");
