@@ -67,6 +67,7 @@ _map_kernel_to_higher_half:
 
 [section .text]
 kernel:
+	xor ebp, ebp
 	cli                                    ; Disable interrupts until we setup gdt and idt
 	call kmain                             ; Start kernel
 	cli                                    ; Clear interrupts if kernel exists

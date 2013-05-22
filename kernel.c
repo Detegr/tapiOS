@@ -23,7 +23,7 @@ void setup_pic(void)
 	printk("OK!\n");
 }
 
-void kmain(unsigned long magic, unsigned long addr)
+void kmain(void)
 {
 	cls();
 	setup_gdt();
