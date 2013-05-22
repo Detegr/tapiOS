@@ -2,6 +2,7 @@
 #define _TAPIOS_UTIL_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 // GDT selectors
 #define CODE_SELECTOR 0x08
@@ -9,6 +10,8 @@
 
 // Interrupt types
 #define GATE_INT32 0x8E
+
+typedef unsigned long physptr_t;
 
 extern void _spurious_irq_check_master(void);
 extern void _spurious_irq_check_slave(void);
