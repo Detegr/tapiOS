@@ -46,6 +46,7 @@ void kmain(void)
 	if(is_free_page(0x500000))
 		printk("Free page 0x500000\n");
 	else printk("Not free page 0x500000\n");
+	kalloc_page(0x500000);
 	while(1)
 	{
 		//__asm__("int $0x21\n");

@@ -9,6 +9,7 @@
 uint32_t bitmap[BITMAP_SIZE];
 
 void setup_bitmap(void);
-bool is_free_page(physptr_t addr);
+bool is_free_page(physaddr_t addr);
+physptr_t* kalloc_page(physaddr_t addr);
 
 #endif

@@ -8,6 +8,7 @@ extern void _kb_int(void);
 extern void _spurious_irq_check_master(void);
 extern void _spurious_irq_check_slave(void);
 extern void _noop_int(void);
+extern void _panic();
 
 void gdtentry(int n, unsigned int base, unsigned int limit, unsigned char access, unsigned char flags)
 {
@@ -45,4 +46,5 @@ uint8_t inb(uint16_t port)
 void panic(void)
 {
 	printk("Kernel panic, halting!\n");
+	_panic();
 }

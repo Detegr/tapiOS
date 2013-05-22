@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define NULL (void*)0x0
+
 // GDT selectors
 #define CODE_SELECTOR 0x08
 #define DATA_SELECTOR 0x10
@@ -11,7 +13,8 @@
 // Interrupt types
 #define GATE_INT32 0x8E
 
-typedef unsigned long physptr_t;
+typedef unsigned long physaddr_t;
+typedef unsigned char* physptr_t;
 
 extern void _spurious_irq_check_master(void);
 extern void _spurious_irq_check_slave(void);
