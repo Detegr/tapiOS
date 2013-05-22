@@ -14,9 +14,10 @@ void setup_bitmap(void)
 bool is_free_page(physaddr_t addr)
 {
 	unsigned i=addr>>17;
-	unsigned offset=0x20000 - (addr % 0x10000);
+	unsigned bitoffset=addr % 0x10000;
+	unsigned offset=bitoffset ? 31 - 0x20000 - bitoffset : 31;
 
-	return (bitmap[i] & offset) == 0;
+	return (bitmap[i] & (1 << offset)) == 0;
 }
 
 physptr_t* kalloc_page_frame(void)
@@ -25,9 +26,13 @@ physptr_t* kalloc_page_frame(void)
 	{
 		if(bitmap[i] != 0xFFFFFFFF)
 		{
-			for(int bit=31, j=0; bit; bit>>=1, j++)
+			for(int bit=31, j=0; bit; bit--, j++)
 			{
-				if(((bitmap[i] >> bit) & 0x1) == 0) return __kernel_end + (i * 0x1000 * 32) + (j * 0x1000);
+				if(((bitmap[i] >> bit) & 0x1) == 0)
+				{
+					bitmap[i] |= 1<<(31-j);
+					return __kernel_end + (i * 0x1000 * 32) + (j * 0x1000);
+				}
 			}
 		}
 	}
