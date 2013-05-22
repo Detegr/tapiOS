@@ -99,9 +99,8 @@ _enable_paging:
 	or eax, 0x80000000 ; Set paging bit
 	mov cr0, eax
 	add esp, 0xC0000000
+	mov ebp, esp
 
 	invlpg [0]
 	mov [ebx], DWORD 0 ; Invalidate identity mapping
-
-	mov ebp, esp
 	ret

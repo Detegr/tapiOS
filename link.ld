@@ -24,6 +24,11 @@ SECTIONS
 		*(.data)
 		*(.rodata*)
 	}
+	.eh_frame ALIGN(4096) : AT(ADDR(.eh_frame) - VIRTUAL_BASE)
+	{
+		*(.eh_frame);
+		*(.rel_eh_frame);
+	}
 	.bss ALIGN(4096) : AT(ADDR(.bss) - VIRTUAL_BASE)
 	{
 		*(COMMON*)
