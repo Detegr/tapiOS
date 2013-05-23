@@ -1,4 +1,4 @@
-#include "bitmap.h"
+#include "pmm.h"
 #include "util.h"
 #include "video.h"
 
@@ -14,10 +14,9 @@ void setup_bitmap(void)
 bool is_free_page(physaddr_t addr)
 {
 	unsigned i=addr>>17;
-	unsigned bitoffset=addr % 0x10000;
-	unsigned offset=bitoffset ? 31 - 0x20000 - bitoffset : 31;
+	unsigned offset=(addr % 0x20000) >> 12;
 
-	return (bitmap[i] & (1 << offset)) == 0;
+	return (bitmap[i] & (0x80000000 >> offset)) == 0;
 }
 
 physptr_t* kalloc_page_frame(void)
@@ -39,21 +38,19 @@ physptr_t* kalloc_page_frame(void)
 	return NULL;
 }
 
-void kfree_page_frame(void)
+void kfree_page_frame(physptr_t* ptr)
 {
-	for(int i=BITMAP_SIZE-1; i>=0; --i)
+	physaddr_t addr = (physaddr_t)ptr;
+	if(addr < 0x400000) return; // Don't free memory under 4mb physical
+	unsigned i = addr>>17;
+	unsigned offset=(addr % 0x20000) >> 12;
+	if(bitmap[i] & (0x80000000 >> offset))
 	{
-		if(bitmap[i] != 0xFFFFFFFF)
-		{
-			for(int bit=0, j=31; bit<=31; bit++, j--)
-			{
-				if(i<=32) return; // Prevent freeing <4mb area
-				if(((bitmap[i] >> bit) & 0x1) != 0)
-				{
-					bitmap[i] ^= 1<<(31-j);
-					return;
-				}
-			}
-		}
+		bitmap[i] &= ~(0x80000000 >> offset);
+	}
+	else
+	{
+		printk("Double freeing page frame!\n");
+		panic();
 	}
 }

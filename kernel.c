@@ -1,7 +1,7 @@
 #include "util.h"
 #include "video.h"
 #include "irq.h"
-#include "bitmap.h"
+#include "pmm.h"
 
 void setup_gdt(void)
 {
@@ -23,6 +23,23 @@ void setup_pic(void)
 	printk("OK!\n");
 }
 
+physptr_t* testalloc(void)
+{
+	physptr_t* pf=kalloc_page_frame();
+	printk("Allocated: ");
+	printix((uint32_t) pf);
+	printk("\n");
+	return pf;
+}
+
+void testfree(physptr_t* ptr)
+{
+	kfree_page_frame(ptr);
+	printk("Freed ");
+	printix((uint32_t) ptr);
+	printk("\n");
+}
+
 void kmain(void)
 {
 	cls();
@@ -31,38 +48,6 @@ void kmain(void)
 	setup_pic();
 	setup_bitmap();
 	printk("Welcome to tapiOS!\n");
-
-	physptr_t* pf=kalloc_page_frame();
-	printk("Allocated: ");
-	printix((uint32_t) pf);
-	printk("\nFreed\n");
-	pf=kalloc_page_frame();
-	printix((uint32_t) pf);
-	printk("Allocated: ");
-	printix((uint32_t) pf);
-	printk("\n");
-
-	pf=kalloc_page_frame();
-	printix((uint32_t) pf);
-	printk("Allocated: ");
-	printix((uint32_t) pf);
-	printk("\n");
-
-	pf=kalloc_page_frame();
-	printix((uint32_t) pf);
-	printk("Allocated: ");
-	printix((uint32_t) pf);
-	printk("\n");
-
-	kfree_page_frame();
-	kfree_page_frame();
-	kfree_page_frame();
-
-	pf=kalloc_page_frame();
-	printix((uint32_t) pf);
-	printk("Allocated: ");
-	printix((uint32_t) pf);
-	printk("\n");
 
 	while(1)
 	{
