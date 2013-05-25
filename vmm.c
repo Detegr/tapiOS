@@ -19,25 +19,33 @@ bool invalidate_page_table(physptr_t* ptr)
 
 void flush_page_directory(void)
 {
-	__asm__ volatile("mov eax, cr3\n\t"
-					 "mov cr3, eax" : : :);
+	__asm__ volatile("mov eax, cr3;"
+					 "mov cr3, eax;"
+					 : : : "eax");
 }
 
 void setup_vmm(void)
 {
+	// Map the last page table to page directory itself
+	pdir[1023]=(((uint32_t)pdir) - 0xC0000000) & 0xFFFFF000;
+	pdir[1023] |= PRESENT|READWRITE;
+
+	physptr_t* ext=kalloc_page_frame();
+	pdir[769]=(physaddr_t)ext|PRESENT|READWRITE;
+	unsigned int* exti=(unsigned int*)ext;
+	for(unsigned i=0, j=0x400000; i<1024; i++, j+=0x1000)
+	{// Map next 4mb of physical memory for kernel
+		exti[i]=j|PRESENT|READWRITE;
+	}
 	pdir[0]=0; // Remove identity mapping
-	//flush_page_directory();
 }
 
 vptr_t* kalloc_page(vaddr_t to)
 {
+	if(to==0x0) return NULL; // Do not allow mapping 0x0
 	physaddr_t pfaddr=(physaddr_t)kalloc_page_frame();
 	unsigned pdi=to >> 22;
-	printix(pfaddr);
-	printk("\n");
-	printix(pdi);
-	printk("\n");
-	if(pdir[pdi * 0x1000])
+	if(pdir[pdi] & PRESENT)
 	{
 		printk("Page table exists\n");
 	}
