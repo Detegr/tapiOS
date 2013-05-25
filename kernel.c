@@ -2,6 +2,7 @@
 #include "video.h"
 #include "irq.h"
 #include "pmm.h"
+#include "vmm.h"
 
 void setup_gdt(void)
 {
@@ -47,7 +48,11 @@ void kmain(void)
 	setup_idt();
 	setup_pic();
 	setup_bitmap();
+	setup_vmm();
 	printk("Welcome to tapiOS!\n");
+
+	testfree(testalloc());
+	kalloc_page(0);
 
 	while(1)
 	{

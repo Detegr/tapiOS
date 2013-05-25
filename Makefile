@@ -1,5 +1,5 @@
-OBJECTS=loader.o paging_asm.o util_asm.o video.o irq_asm.o irq.o util.o pmm.o kernel.o
-CFLAGS=-Wall -Wextra -Werror -nostdlib -nostartfiles -nodefaultlibs -Wno-unused-parameter -m32 -ffreestanding -g3 -std=c99 -Wno-unused-variable
+OBJECTS=loader.o paging_asm.o util_asm.o video.o irq_asm.o irq.o util.o pmm.o vmm.o kernel.o
+CFLAGS=-Wall -Wextra -Werror -nostdlib -nostartfiles -nodefaultlibs -Wno-unused-parameter -m32 -ffreestanding -g3 -std=c99 -Wno-unused-variable -masm=intel
 ASM_FLAGS=-f elf
 LFLAGS=-melf_i386
 

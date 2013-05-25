@@ -3,6 +3,7 @@
 global _setup_page_table
 global _map_page
 global _enable_paging
+global _invalidate_page_table
 
 KERNEL_VMA equ 0xC0000000
 FLAG_PRESENT equ 0x1
@@ -87,7 +88,7 @@ _calculate_directory_position:
 	ret
 
 _set_kernel_tbl_index:
-	or ebx, FLAG_PRESENT
+	or ebx, FLAG_PRESENT|FLAG_READWRITE
 	mov [eax+edx], ebx                    ; Use index from edx
 	ret
 
@@ -101,6 +102,4 @@ _enable_paging:
 	add esp, 0xC0000000
 	mov ebp, esp
 
-	invlpg [0]
-	mov [ebx], DWORD 0 ; Invalidate identity mapping
 	ret
