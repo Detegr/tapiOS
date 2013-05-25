@@ -24,23 +24,6 @@ void setup_pic(void)
 	printk("OK!\n");
 }
 
-physptr_t* testalloc(void)
-{
-	physptr_t* pf=kalloc_page_frame();
-	printk("Allocated: ");
-	printix((uint32_t) pf);
-	printk("\n");
-	return pf;
-}
-
-void testfree(physptr_t* ptr)
-{
-	kfree_page_frame(ptr);
-	printk("Freed ");
-	printix((uint32_t) ptr);
-	printk("\n");
-}
-
 void kmain(void)
 {
 	cls();
@@ -50,9 +33,6 @@ void kmain(void)
 	setup_bitmap();
 	setup_vmm();
 	printk("Welcome to tapiOS!\n");
-
-	testfree(testalloc());
-	kalloc_page(0);
 
 	while(1)
 	{
