@@ -5,17 +5,11 @@
 #define PRESENT 0x1
 #define READWRITE 0x2
 
-#define PAGE_DIRECTORY ((unsigned char*)0xFFC00000)
+#define PAGE_DIRECTORY ((unsigned int*)0xFFC00000)
 
 extern void _invalidate_page_table(unsigned ptbl);
 extern uint32_t _page_directory;
 static uint32_t* pdir=&_page_directory; // Identity mapping of 0-4mb is still active
-
-bool invalidate_page_table(physptr_t* ptr)
-{
-	//__asm__ volatile("invlpg %0" : : "m"(*ptr) : "memory");
-	return true;
-}
 
 void flush_page_directory(void)
 {
@@ -40,19 +34,25 @@ void setup_vmm(void)
 	pdir[0]=0; // Remove identity mapping
 }
 
+void new_page_table(unsigned pdi)
+{
+	physptr_t* pptr=kalloc_page_frame();
+	pdir[pdi]=(physaddr_t)pptr|PRESENT|READWRITE;
+	for(unsigned i=0; i<1024; i++)
+	{// Zero out the page table
+		PAGE_DIRECTORY[pdi * 0x400 + i]=0|PRESENT|READWRITE;
+	}
+}
+
 vptr_t* kalloc_page(vaddr_t to)
 {
+	to = to & 0xFFFFF000; // Align by page
 	if(to==0x0) return NULL; // Do not allow mapping 0x0
 	physaddr_t pfaddr=(physaddr_t)kalloc_page_frame();
 	unsigned pdi=to >> 22;
-	if(pdir[pdi] & PRESENT)
-	{
-		printk("Page table exists\n");
-	}
-	else
-	{
-		printk("Allocate new page table\n");
-	}
+	unsigned pti=(to & 0x003FFFFF) >> 12;
 
-	return NULL;
+	if(!(pdir[pdi] & PRESENT)) new_page_table(pdi);
+	PAGE_DIRECTORY[pdi * 0x400 + pti]=pfaddr | PRESENT | READWRITE;
+	return (vptr_t*)to;
 }
