@@ -6,13 +6,12 @@
 
 #define BITMAP_SIZE 32768
 typedef unsigned long physaddr_t;
-typedef unsigned char physptr_t;
 
 uint32_t bitmap[BITMAP_SIZE];
 
 void setup_bitmap(void);
 bool is_free_page(physaddr_t addr);
-physptr_t* kalloc_page_frame();
-void kfree_page_frame(physptr_t* ptr);
+physaddr_t kalloc_page_frame();
+void kfree_page_frame(physaddr_t ptr);
 
 #endif

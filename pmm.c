@@ -28,7 +28,7 @@ bool is_free_page(physaddr_t addr)
 	return (bitmap[i] & (0x80000000 >> offset)) == 0;
 }
 
-physptr_t* kalloc_page_frame(void)
+physaddr_t kalloc_page_frame(void)
 {
 	for(int i=0; i<BITMAP_SIZE; ++i)
 	{
@@ -39,17 +39,16 @@ physptr_t* kalloc_page_frame(void)
 				if(((bitmap[i] >> bit) & 0x1) == 0)
 				{
 					bitmap[i] |= 1<<(31-j);
-					return (physptr_t*)(i * 0x1000 * 32) + (j * 0x1000);
+					return (i * 0x1000 * 32) + (j * 0x1000);
 				}
 			}
 		}
 	}
-	return NULL;
+	return (physaddr_t)0x0;
 }
 
-void kfree_page_frame(physptr_t* ptr)
+void kfree_page_frame(physaddr_t addr)
 {
-	physaddr_t addr = (physaddr_t)ptr;
 	if(addr < kend_addr)
 	{
 		printk("Warning: Refusing to free physical address used by the kernel!\n");

@@ -24,8 +24,8 @@ void setup_vmm(void)
 	pdir[1023]=(((uint32_t)pdir) - 0xC0000000) & 0xFFFFF000;
 	pdir[1023] |= PRESENT|READWRITE;
 
-	physptr_t* ext=kalloc_page_frame();
-	pdir[769]=(physaddr_t)ext|PRESENT|READWRITE;
+	physaddr_t ext=kalloc_page_frame();
+	pdir[769]=ext|PRESENT|READWRITE;
 	unsigned int* exti=(unsigned int*)ext;
 	for(unsigned i=0, j=0x400000; i<1024; i++, j+=0x1000)
 	{// Map next 4mb of physical memory for kernel
@@ -36,8 +36,8 @@ void setup_vmm(void)
 
 void new_page_table(unsigned pdi)
 {
-	physptr_t* pptr=kalloc_page_frame();
-	pdir[pdi]=(physaddr_t)pptr|PRESENT|READWRITE;
+	physaddr_t paddr=kalloc_page_frame();
+	pdir[pdi]=paddr|PRESENT|READWRITE;
 	for(unsigned i=0; i<1024; i++)
 	{// Zero out the page table
 		PAGE_DIRECTORY[pdi * 0x400 + i]=0|PRESENT|READWRITE;
@@ -48,7 +48,7 @@ vptr_t* kalloc_page(vaddr_t to)
 {
 	to = to & 0xFFFFF000; // Align by page
 	if(to==0x0) return NULL; // Do not allow mapping 0x0
-	physaddr_t pfaddr=(physaddr_t)kalloc_page_frame();
+	physaddr_t pfaddr=kalloc_page_frame();
 	unsigned pdi=to >> 22;
 	unsigned pti=(to & 0x003FFFFF) >> 12;
 
