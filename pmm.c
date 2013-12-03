@@ -3,7 +3,6 @@
 #include "video.h"
 
 extern uint8_t __kernel_end;
-static uint32_t kend_addr;
 
 void setup_bitmap(void)
 {

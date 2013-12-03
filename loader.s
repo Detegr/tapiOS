@@ -16,6 +16,7 @@ CHECKSUM	equ 0-(MAGIC + FLAGS)
 extern _setup_page_table
 extern _map_page
 extern _enable_paging
+extern __kernel_end
 
 section .text align = 4
 
@@ -49,16 +50,26 @@ _map_kernel_to_higher_half:
 	pop ecx                                ; page_tbl_kernel
 	call _setup_page_table
 
-										   ; Identity map first 4mb
+										   ; Identity map the kernel
 	                                       ; eax contains page_directory
 	mov ebx, 0x0                           ; virtual
-	mov ecx, 1024                          ; count
+	; Calculate how many pages needs to be mapped
+	mov ecx, __kernel_end                  ; load kernel ending address
+	sub ecx, 0xC0000000                    ; subtract kernel vma base
+	and ecx, 0xFFFFF000                    ; align by page
+	add ecx, 0x1000						   ; add the last full page
+	shr ecx, 12 						   ; divide by page size (4096)
 	mov edx, 0x0                           ; physical
 	call _map_page
 
-										   ; Map kernel 0mb - 4mb to 0xC0000000
+										   ; Map kernel to 0xC0000000
 	mov ebx, 0xC0000000                    ; virtual
-	mov ecx, 1024                          ; count
+	; Calculate how many pages needs to be mapped
+	mov ecx, __kernel_end                  ; load kernel ending address
+	sub ecx, 0xC0000000                    ; subtract kernel vma base
+	and ecx, 0xFFFFF000                    ; align by page
+	add ecx, 0x1000						   ; add the last full page
+	shr ecx, 12 						   ; divide by page size (4096)
 	mov edx, 0x0                           ; physical
 	call _map_page
 

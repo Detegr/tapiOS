@@ -3,6 +3,7 @@
 #include "irq.h"
 #include "pmm.h"
 #include "vmm.h"
+#include "heap.h"
 
 void setup_gdt(void)
 {
@@ -32,11 +33,11 @@ void kmain(void)
 	setup_pic();
 	setup_bitmap();
 	setup_vmm();
+
 	printk("Welcome to tapiOS!\n");
 
 	while(1)
 	{
-		//__asm__("int $0x21\n");
 		_idle();
 	}
 	panic();

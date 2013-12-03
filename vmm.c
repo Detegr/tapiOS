@@ -24,13 +24,6 @@ void setup_vmm(void)
 	pdir[1023]=(((uint32_t)pdir) - 0xC0000000) & 0xFFFFF000;
 	pdir[1023] |= PRESENT|READWRITE;
 
-	physaddr_t ext=kalloc_page_frame();
-	pdir[769]=ext|PRESENT|READWRITE;
-	unsigned int* exti=(unsigned int*)ext;
-	for(unsigned i=0, j=0x400000; i<1024; i++, j+=0x1000)
-	{// Map next 4mb of physical memory for kernel
-		exti[i]=j|PRESENT|READWRITE;
-	}
 	pdir[0]=0; // Remove identity mapping
 }
 
@@ -40,7 +33,7 @@ void new_page_table(unsigned pdi)
 	pdir[pdi]=paddr|PRESENT|READWRITE;
 	for(unsigned i=0; i<1024; i++)
 	{// Zero out the page table
-		PAGE_DIRECTORY[pdi * 0x400 + i]=0|PRESENT|READWRITE;
+		PAGE_DIRECTORY[pdi * 0x400 + i]=0;
 	}
 }
 
@@ -52,7 +45,16 @@ vptr_t* kalloc_page(vaddr_t to)
 	unsigned pdi=to >> 22;
 	unsigned pti=(to & 0x003FFFFF) >> 12;
 
-	if(!(pdir[pdi] & PRESENT)) new_page_table(pdi);
+	if(!(pdir[pdi] & PRESENT))
+	{
+		new_page_table(pdi);
+	}
+	else if(PAGE_DIRECTORY[pdi * 0x400 + pti] & PRESENT)
+	{
+		printk("Warning: Double page allocation at ");
+		printix(to);
+		printk("\n");
+	}
 	PAGE_DIRECTORY[pdi * 0x400 + pti]=pfaddr | PRESENT | READWRITE;
 	return (vptr_t*)to;
 }

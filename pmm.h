@@ -6,6 +6,7 @@
 
 #define BITMAP_SIZE 32768
 typedef unsigned long physaddr_t;
+uint32_t kend_addr;
 
 uint32_t bitmap[BITMAP_SIZE];
 
