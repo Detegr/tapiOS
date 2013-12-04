@@ -1,6 +1,7 @@
 global _setgdt
 global _setidt
 global _outb
+global _outw
 global _io_wait
 global _idle
 global _panic
@@ -33,6 +34,15 @@ _outb:
 	mov al, [esp+8]
 	mov dx, [esp+4]
 	out dx, al
+	ret
+
+_outw:
+	push ebp
+	mov ebp, esp
+	mov ax, [esp+8]
+	mov dx, [esp+4]
+	out dx, ax
+	pop ebp
 	ret
 
 _inb:

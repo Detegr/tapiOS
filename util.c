@@ -1,7 +1,8 @@
 #include "util.h"
 #include "video.h"
 
-extern void _outb(uint8_t dest, uint16_t src);
+extern void _outb(uint16_t dest, uint8_t src);
+extern void _outw(uint16_t dest, uint16_t src);
 extern uint8_t _inb(uint16_t port);
 extern void _io_wait(void);
 extern void _kb_int(void);
@@ -32,9 +33,14 @@ void idtentry(int n, uint32_t offset, uint16_t selector, uint8_t type)
 	ie->type_and_attr = type;
 }
 
-inline void outb(uint16_t port, uint8_t src)
+inline void outb(uint16_t port, uint16_t src)
 {
 	_outb(port, src);
+}
+
+inline void outw(uint16_t port, uint16_t src)
+{
+	_outw(port, src);
 }
 
 uint8_t inb(uint16_t port)
@@ -47,4 +53,13 @@ void panic(void)
 {
 	printk("Kernel panic, halting!\n");
 	_panic();
+}
+
+void* memcpy(void* dst, void* src, uint32_t size)
+{
+	for(uint32_t i=0; i<size; ++i)
+	{
+		((uint8_t*)dst)[i]=((uint8_t*)src)[i];
+	}
+	return dst;
 }

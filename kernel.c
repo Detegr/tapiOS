@@ -5,9 +5,38 @@
 #include "vmm.h"
 #include "heap.h"
 
+#define KERNEL_VMA 0xC0000000
+
+struct multiboot
+{
+   uint32_t flags;
+   uint32_t mem_lower;
+   uint32_t mem_upper;
+   uint32_t boot_device;
+   uint32_t cmdline;
+   uint32_t mods_count;
+   uint32_t mods_addr;
+   uint32_t num;
+   uint32_t size;
+   uint32_t addr;
+   uint32_t shndx;
+   uint32_t mmap_length;
+   uint32_t mmap_addr;
+   uint32_t drives_length;
+   uint32_t drives_addr;
+   uint32_t config_table;
+   uint32_t boot_loader_name;
+   uint32_t apm_table;
+   uint32_t vbe_control_info;
+   uint32_t vbe_mode_info;
+   uint32_t vbe_mode;
+   uint32_t vbe_interface_seg;
+   uint32_t vbe_interface_off;
+   uint32_t vbe_interface_len;
+}  __attribute__((packed));
+
 void setup_gdt(void)
 {
-	printk("Setting up GDT...");
 	gdtentry(0, 0, 0, 0, 0); // null descriptor
 	// Flat memory setup
 	gdtentry(1, 0, 0xFFFFFFFF, 0x9A, 0x0F); // 0x9A == read only (code segment), flags: 4kb blocks, 32 bit protected mode (0x0F)
@@ -15,26 +44,37 @@ void setup_gdt(void)
 	gdtptr.limit=sizeof(gdt)-1;
 	gdtptr.base=(unsigned int)&gdt;
 	_setgdt();
-	printk("OK!\n");
+	print_startup_info("GDT", "OK\n");
 }
 
 void setup_pic(void)
 {
-	printk("Remapping PIC...");
 	remap_pic(0x20, 0x28);
-	printk("OK!\n");
+	print_startup_info("PIC", "OK\n");
 }
 
-void kmain(void)
+uint32_t kernel_end_addr=0;
+extern uint32_t __kernel_end;
+
+void kmain(struct multiboot* b, uint32_t magic)
 {
 	cls();
 	setup_gdt();
 	setup_idt();
 	setup_pic();
+	if(b->mods_count == 1)
+	{
+		uint32_t mods_start_addr=*(uint32_t*)(b->mods_addr);
+		uint32_t mods_end_addr=*(uint32_t*)(b->mods_addr + 4);
+		if(((uint32_t)&__kernel_end - KERNEL_VMA) < mods_end_addr) kernel_end_addr=(mods_end_addr & 0xFFFFF000) + 0x1000;
+	}
 	setup_bitmap();
 	setup_vmm();
 
-	printk("Welcome to tapiOS!\n");
+	b=(struct multiboot*)((uint8_t*)b+KERNEL_VMA);
+	uint32_t mods_addr=*(uint32_t*)(b->mods_addr + KERNEL_VMA) + KERNEL_VMA;
+
+	kprintf("\nWelcome to tapiOS\nMod count: %d\n\nInitrd contents: %s", b->mods_count, (char*)mods_addr);
 
 	while(1)
 	{

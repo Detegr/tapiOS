@@ -1,5 +1,5 @@
 *.o
-tapios/
+tapios/boot/kernel.bin
 kernel
 .gdbinit
 a.out

@@ -33,6 +33,9 @@ _start:
 	sub esp, KERNEL_VMA                    ; Correct to the physical address of the stack
 	mov ebp, esp
 
+	push eax ; Multiboot magic number
+	push ebx ; Multiboot header
+
 	push _page_tbl_kernel - KERNEL_VMA
 	push _page_tbl_low - KERNEL_VMA
 	push _page_directory - KERNEL_VMA
@@ -80,6 +83,7 @@ _map_kernel_to_higher_half:
 kernel:
 	xor ebp, ebp
 	cli                                    ; Disable interrupts until we setup gdt and idt
+	
 	call kmain                             ; Start kernel
 	cli                                    ; Clear interrupts if kernel exists
 .halt:

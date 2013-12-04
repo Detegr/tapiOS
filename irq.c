@@ -18,7 +18,6 @@ void page_fault(void)
 
 void setup_idt(void)
 {
-	printk("Setting up IDT...");
 	int i;
 	for(i=0; i<255; ++i)
 	{
@@ -33,7 +32,7 @@ void setup_idt(void)
 	idtptr.limit=sizeof(idt)-1;
 	idtptr.base=(unsigned int)&idt;
 	_setidt();
-	printk("OK!\n");
+	print_startup_info("IDT", "OK\n");
 }
 
 #define PIC1 0x20

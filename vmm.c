@@ -7,6 +7,7 @@
 
 #define PAGE_DIRECTORY ((uint32_t*)0xFFC00000)
 
+extern uint32_t kernel_end_addr;
 extern void _invalidate_page_table(unsigned ptbl);
 extern uint32_t _page_directory;
 static uint32_t* pdir=&_page_directory;
@@ -23,7 +24,7 @@ static inline void invalidate_page(uint32_t addr)
 	__asm__ volatile("invlpg [%0]" :: "r"(addr) : "memory");
 }
 
-void set_page(vaddr_t addr, uint32_t flags)
+static void set_page(vaddr_t addr, uint32_t flags)
 {
 	unsigned pdi=addr >> 22;
 	unsigned pti=(addr & 0x003FFFFF) >> 12;
@@ -32,16 +33,34 @@ void set_page(vaddr_t addr, uint32_t flags)
 	invalidate_page((uint32_t)&PAGE_DIRECTORY[pd_index]);
 }
 
-uint32_t get_page_table_entry(uint16_t pdi, uint32_t pti)
+static uint32_t get_page(vaddr_t addr)
+{
+	unsigned pdi=addr >> 22;
+	unsigned pti=(addr & 0x003FFFFF) >> 12;
+	unsigned pd_index=pdi*0x400 + pti;
+	return PAGE_DIRECTORY[pd_index];
+}
+
+static uint32_t get_page_table_entry(uint32_t pdi, uint32_t pti)
 {
 	return (uint32_t)PAGE_DIRECTORY[pdi * 0x400 + pti];
 }
 
-void set_page_table_entry(uint16_t pdi, uint32_t pti, uint32_t flags)
+static void set_page_table_entry(uint16_t pdi, uint32_t pti, uint32_t flags)
 {
 	uint32_t pd_index=pdi * 0x400 + pti;
 	PAGE_DIRECTORY[pd_index]=flags;
 	invalidate_page((uint32_t)&PAGE_DIRECTORY[pd_index]);
+}
+
+static uint32_t get_page_directory_entry(uint32_t pdi)
+{
+	return pdir[pdi];
+}
+
+static void set_page_directory_entry(uint32_t pdi, uint32_t flags)
+{
+	pdir[pdi]=flags;
 }
 
 void setup_vmm(void)
@@ -57,36 +76,72 @@ void setup_vmm(void)
 		set_page(i * 0x1000, 0);
 	}
 	pdir[0]=0;
+
+	// Map the possible ramfs to 0xC0000000
+	for(uint32_t i=0xC0000000; i<kernel_end_addr + 0xC0000000; i+=0x1000)
+	{
+		if(!(get_page(i) & PRESENT))
+		{
+			kalloc_page_from(i - 0xC0000000, i);
+		}
+	}
+	print_startup_info("VMM", "OK\n");
 }
 
-void new_page_table(unsigned pdi, uint32_t to)
+static void new_page_table(unsigned pdi, uint32_t to)
 {
 	physaddr_t paddr=kalloc_page_frame();
-	pdir[pdi]=paddr|PRESENT|READWRITE;
+	set_page_directory_entry(pdi, paddr|PRESENT|READWRITE);
 	for(unsigned i=0; i<1024; i++)
 	{// Zero out the page table
 		set_page_table_entry(pdi, i, 0);
 	}
 }
 
-vptr_t* kalloc_page(vaddr_t to)
+vptr_t* kalloc_page_from(physaddr_t from, vaddr_t to)
 {
+	if(!from) panic();
+
 	to = to & 0xFFFFF000; // Align by page
 	if(to==0x0) return NULL; // Do not allow mapping 0x0
-	physaddr_t pfaddr=kalloc_page_frame();
+
 	unsigned pdi=to >> 22;
 	unsigned pti=(to & 0x003FFFFF) >> 12;
 
-	if(!(pdir[pdi] & PRESENT))
+	if(!(get_page_directory_entry(pdi) & PRESENT))
 	{
 		new_page_table(pdi, to);
 	}
-	else if(PAGE_DIRECTORY[pdi * 0x400 + pti] & PRESENT)
+	else if(get_page_table_entry(pdi, pti) & PRESENT)
 	{
 		printk("Warning: Double page allocation at ");
 		printix(to);
 		printk("\n");
+		return NULL;
 	}
-	set_page_table_entry(pdi, pti, pfaddr|PRESENT|READWRITE);
+	if(is_free_page(from))
+	{
+		printk("Trying to map virtual memory address ");
+		printix(from);
+		printk(" to unreserved physical memory address ");
+		printix(to);
+		printk("\n");
+		panic();
+	}
+	set_page_table_entry(pdi, pti, from|PRESENT|READWRITE);
 	return (vptr_t*)to;
+}
+
+vptr_t* kalloc_page(vaddr_t to)
+{
+	to = to & 0xFFFFF000; // Align by page
+	if(to==0x0) return NULL; // Do not allow mapping 0x0
+	return kalloc_page_from(kalloc_page_frame(), to);
+}
+
+void kfree_page(vaddr_t from)
+{
+	physaddr_t paddr=get_page(from) & 0xFFFFF000;
+	kfree_page_frame(paddr);
+	set_page(from, 0);
 }
