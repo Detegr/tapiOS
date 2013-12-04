@@ -5,6 +5,7 @@
 #include <stdbool.h>
 
 #define NULL (void*)0x0
+#define PANIC() panic(__FILE__,__LINE__)
 
 // GDT selectors
 #define CODE_SELECTOR 0x08
@@ -71,7 +72,7 @@ void outb(uint16_t port, uint16_t src);
 void outw(uint16_t port, uint16_t src);
 uint8_t inb(uint16_t port);
 
-void panic(void);
+void panic(const char* file, uint32_t line);
 
 void* memcpy(void* dst, void* src, uint32_t size);
 

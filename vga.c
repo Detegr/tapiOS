@@ -1,4 +1,4 @@
-#include "video.h"
+#include "vga.h"
 #include "util.h"
 #include <stdarg.h>
 
@@ -9,8 +9,7 @@ static uint8_t row=0;
 
 void hide_cursor(void)
 {
-	outw(0x3D4,0x200A);
-	outw(0x3D4,0xB);
+	set_cursor(100, 100);
 }
 
 void set_cursor(uint8_t row, uint8_t col)
@@ -36,7 +35,7 @@ void cls(void)
 	col=row=0;
 }
 
-void printkchar(const char c, uint8_t color)
+static void printchar(const char c, uint8_t color)
 {
 	if(c=='\n')
 	{
@@ -54,33 +53,33 @@ void printkchar(const char c, uint8_t color)
 	}
 }
 
-void printkc(const char* str, uint8_t color)
+static void print(const char* str, uint8_t color)
 {
 	const char* s;
 	for(s=str; *s; s++)
 	{
-		printkchar(*s, color);
+		printchar(*s, color);
 	}
 }
 
-char halfbytetohex(uint8_t b)
+static char halfbytetohex(uint8_t b)
 {
 	char hex[]={'0','1','2','3','4','5','6','7',
 				'8','9','A','B','C','D','E','F'};
 	return hex[b];
 }
 
-void printix(uint32_t x)
+static void printix(uint32_t x, int color)
 {
-	printk("0x");
+	print("0x", color);
 	int i;
 	for(i=28; i>=0; i-=4)
 	{
-		printkchar(halfbytetohex((x>>i) & 0x0F), 0x07);
+		printchar(halfbytetohex((x>>i) & 0x0F), color);
 	}
 }
 
-void printi(uint32_t i)
+static void printi(uint32_t i, int color)
 {
 	static char buf[12]; // uint32_t + \0
 	char* p=&buf[11];
@@ -88,25 +87,23 @@ void printi(uint32_t i)
 		*(--p) = '0' + i%10;
 		i /= 10;
 	} while(i!=0);
-	printk(p);
+	print(p, color);
 }
 
-inline void printk(const char* str) { printkc(str, 0x07); }
 inline void print_startup_info(const char* section, const char* msg)
 {
-	printkc("[", 0x0F);
-	printkc(section, 0x09);
-	printkc("] ", 0x0F);
-	printk(msg);
+	kprintf("%@[%@%s%@]%@ %s", 0x0F, 0x09, section, 0x0F, 0x07, msg);
 }
 
 void kprintf(const char* fmt, ...)
 {
+	int color=0x07;
+
 	va_list argp;
 	va_start(argp, fmt);
 	for(const char* p=fmt; *p; ++p)
 	{
-		if(*p != '%') printkchar(*p, 0x07);
+		if(*p != '%') printchar(*p, color);
 		else
 		{
 			switch(*(++p))
@@ -114,30 +111,35 @@ void kprintf(const char* fmt, ...)
 				case 'x':
 				{
 					int i=va_arg(argp, int);
-					printix(i);
+					printix(i, color);
 					break;
 				}
 				case 'c':
 				{
 					char c=va_arg(argp, int);
-					printkchar(c, 0x07);
+					printchar(c, color);
 					break;
 				}
 				case 'd':
 				{
 					int i=va_arg(argp, int);
-					printi(i);
+					printi(i, color);
 					break;
 				}
 				case 's':
 				{
 					char* p=va_arg(argp, char*);
-					printk(p);
+					print(p, color);
 					break;
 				}
 				case '%':
 				{
-					printkchar('%', 0x07);
+					printchar('%', color);
+					break;
+				}
+				case '@':
+				{
+					color=va_arg(argp, int);
 					break;
 				}
 			}

@@ -5,15 +5,15 @@ extern void _page_fault(void);
 
 void irq1_handler(void)
 {
-	printk("Interrupt test!\n");
+	kprintf("Interrupt test!\n");
 	inb(0x60);
 	uint8_t i=inb(0x61);
 	outb(0x61, i);
 }
 void page_fault(void)
 {
-	printk("Page fault!\n");
-	panic();
+	kprintf("Page fault!\n");
+	PANIC();
 }
 
 void setup_idt(void)

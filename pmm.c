@@ -1,6 +1,6 @@
 #include "pmm.h"
 #include "util.h"
-#include "video.h"
+#include "vga.h"
 
 extern uint32_t kernel_end_addr;
 extern uint32_t __kernel_end;
@@ -45,15 +45,16 @@ physaddr_t kalloc_page_frame_at(physaddr_t addr)
 	if(is_free_page(addr))
 	{
 		set_page_reserved(addr, true);
-		if(is_free_page(addr)) printk("Page still free :G\n");
-		else printk("Page reserved OK\n");
+		/*
+		if(is_free_page(addr)) kprintf("Page still free\n");
+		else kprintf("Page reserved OK\n");
+		*/
 		return addr;
 	}
 	else
 	{
-		printk("Page at ");
-		printix(addr);
-		printk(" not free!\n");
+		kprintf("Page at %x not free!\n", addr);
+		PANIC();
 	}
 	return 0;
 }
@@ -82,23 +83,17 @@ void kfree_page_frame(physaddr_t addr)
 	addr=addr&0xFFFFF000; // Align
 	if(addr < kernel_end_addr)
 	{
-		printk("Warning: Refusing to free physical address ");
-		printix(addr);
-		printk(" used by the kernel!\n");
+		kprintf("Warning: Refusing to free physical address %x used by the kernel!\n", addr);
 		return;
 	}
 	if(!is_free_page(addr))
 	{
 		set_page_reserved(addr, false);
-		printk("Physical address ");
-		printix(addr);
-		printk(" freed.");
+		kprintf("Physical address %x freed.\n");
 	}
 	else
 	{
-		printk("Double freeing page frame at\n");
-		printix(addr);
-		printk("\n");
-		panic();
+		kprintf("Double freeing page frame at %x\n", addr);
+		PANIC();
 	}
 }

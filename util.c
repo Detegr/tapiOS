@@ -1,5 +1,5 @@
 #include "util.h"
-#include "video.h"
+#include "vga.h"
 
 extern void _outb(uint16_t dest, uint8_t src);
 extern void _outw(uint16_t dest, uint16_t src);
@@ -49,9 +49,9 @@ uint8_t inb(uint16_t port)
 	return i;
 }
 
-void panic(void)
+void panic(const char* file, uint32_t line)
 {
-	printk("Kernel panic, halting!\n");
+	kprintf("Kernel panic (%s:%d), halting!\n", file, line);
 	_panic();
 }
 

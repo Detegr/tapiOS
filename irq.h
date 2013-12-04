@@ -2,7 +2,7 @@
 #define _TAPIOS_IRQ_H_
 
 #include "util.h"
-#include "video.h"
+#include "vga.h"
 
 void irq1_handler(void);
 

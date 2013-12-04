@@ -1,5 +1,5 @@
 #include "util.h"
-#include "video.h"
+#include "vga.h"
 #include "irq.h"
 #include "pmm.h"
 #include "vmm.h"
@@ -74,11 +74,11 @@ void kmain(struct multiboot* b, uint32_t magic)
 	b=(struct multiboot*)((uint8_t*)b+KERNEL_VMA);
 	uint32_t mods_addr=*(uint32_t*)(b->mods_addr + KERNEL_VMA) + KERNEL_VMA;
 
-	kprintf("\nWelcome to tapiOS\nMod count: %d\n\nInitrd contents: %s", b->mods_count, (char*)mods_addr);
+	kprintf("\n%@Welcome to tapiOS!%@\nMod count: %d\n\nInitrd contents: %@%s%@", 0x05, 0x07, b->mods_count, 0x03, (char*)mods_addr, 0x07);
 
 	while(1)
 	{
 		_idle();
 	}
-	panic();
+	PANIC();
 }

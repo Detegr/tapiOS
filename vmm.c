@@ -1,6 +1,6 @@
 #include "pmm.h"
 #include "vmm.h"
-#include "video.h"
+#include "vga.h"
 
 #define PRESENT 0x1
 #define READWRITE 0x2
@@ -100,7 +100,7 @@ static void new_page_table(unsigned pdi, uint32_t to)
 
 vptr_t* kalloc_page_from(physaddr_t from, vaddr_t to)
 {
-	if(!from) panic();
+	if(!from) PANIC();
 
 	to = to & 0xFFFFF000; // Align by page
 	if(to==0x0) return NULL; // Do not allow mapping 0x0
@@ -114,19 +114,13 @@ vptr_t* kalloc_page_from(physaddr_t from, vaddr_t to)
 	}
 	else if(get_page_table_entry(pdi, pti) & PRESENT)
 	{
-		printk("Warning: Double page allocation at ");
-		printix(to);
-		printk("\n");
+		kprintf("Warning: Double page allocation at %x\n", to);
 		return NULL;
 	}
 	if(is_free_page(from))
 	{
-		printk("Trying to map virtual memory address ");
-		printix(from);
-		printk(" to unreserved physical memory address ");
-		printix(to);
-		printk("\n");
-		panic();
+		kprintf("Trying to map virtual memory address %x to %x\n", from, to);
+		PANIC();
 	}
 	set_page_table_entry(pdi, pti, from|PRESENT|READWRITE);
 	return (vptr_t*)to;

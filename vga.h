@@ -6,9 +6,6 @@
 volatile unsigned char* video;
 
 void cls(void);
-void printk(const char* str);
-void printkc(const char* str, uint8_t color);
-void printix(uint32_t x);
 void print_startup_info(const char* section, const char* msg);
 void kprintf(const char* fmt, ...);
 void hide_cursor(void);
