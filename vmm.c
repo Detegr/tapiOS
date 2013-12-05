@@ -26,7 +26,7 @@ static inline void invalidate_page(uint32_t addr)
 	__asm__ volatile("invlpg [%0]" :: "r"(addr) : "memory");
 }
 
-static void set_page(vaddr_t addr, uint32_t flags)
+void set_page(vaddr_t addr, uint32_t flags)
 {
 	unsigned pdi=addr >> 22;
 	unsigned pti=(addr & 0x003FFFFF) >> 12;
@@ -35,7 +35,7 @@ static void set_page(vaddr_t addr, uint32_t flags)
 	invalidate_page((uint32_t)&PAGE_DIRECTORY[pd_index]);
 }
 
-static uint32_t get_page(vaddr_t addr)
+uint32_t get_page(vaddr_t addr)
 {
 	unsigned pdi=addr >> 22;
 	unsigned pti=(addr & 0x003FFFFF) >> 12;
@@ -48,7 +48,7 @@ static uint32_t get_page_table_entry(uint32_t pdi, uint32_t pti)
 	return (uint32_t)PAGE_DIRECTORY[pdi * 0x400 + pti];
 }
 
-static void set_page_table_entry(uint16_t pdi, uint32_t pti, uint32_t flags)
+void set_page_table_entry(uint16_t pdi, uint32_t pti, uint32_t flags)
 {
 	uint32_t pd_index=pdi * 0x400 + pti;
 	PAGE_DIRECTORY[pd_index]=flags;
@@ -60,26 +60,68 @@ page_directory* DEBUG_get_kernel_pdir(void)
 	return kernel_pdir;
 }
 
-page_table* clone_page_table_from(page_table* src)
+static bool page_table_exists(uint32_t pdi)
 {
-	return NULL;
+	return kernel_pdir->entries[pdi].flags & PRESENT;
+}
+
+static void new_page_table(unsigned pdi)
+{
+	physaddr_t paddr=kalloc_page_frame();
+	kernel_pdir->entries[pdi].as_uint32=paddr|PRESENT|READWRITE;
+	for(unsigned i=0; i<1024; i++)
+	{// Zero out the page table
+		set_page_table_entry(pdi, i, 0);
+	}
+}
+
+static void clone_page_table(uint32_t i)
+{
+	for(int j=0; j<1021; ++j)
+	{
+		if(get_page_table_entry(1021, j) != 0)
+		{
+			kprintf("Copying %x -> %x, index: %d\n", get_page_table_entry(1021, j), get_page_table_entry(1022, j), j);
+			set_page_table_entry(1022, j, get_page_table_entry(1021, j));
+		}
+	}
 }
 
 page_directory* clone_page_directory_from(page_directory* src)
 {
 	page_directory* ret=kmalloc(sizeof(page_directory));
 	kprintf("pdir size: %d, pdir: %x, entries addr: %x\n", sizeof(page_directory), ret, ret->entries);
+
+	physaddr_t src_pdir_paddr=get_page((vaddr_t)src);
+	physaddr_t ret_pdir_paddr=get_page((vaddr_t)ret);
+
+	if(!page_table_exists(1021)) new_page_table(1021);
+	if(!page_table_exists(1022)) new_page_table(1022);
+
+	kernel_pdir->entries[1021].as_uint32=src_pdir_paddr|PRESENT|READWRITE;
+	kernel_pdir->entries[1022].as_uint32=ret_pdir_paddr|PRESENT|READWRITE;
+	flush_page_directory();
+
 	for(int i=0; i<1024; ++i)
 	{
 		// If source entry is in kernel pdir, use it as it is not going to change.
-		if(src->entries[i].as_uint32 == kernel_pdir->entries[i].as_uint32) ret->entries[i].as_uint32=kernel_pdir->entries[i].as_uint32;
-		else
+		//if(src->entries[i].as_uint32 == kernel_pdir->entries[i].as_uint32) ret->entries[i].as_uint32=kernel_pdir->entries[i].as_uint32;
+		//else
 		{
-			page_table* tbl=clone_page_table_from((page_table*)(src->entries[i].addr << 12));
-			physaddr_t paddr=get_page((vaddr_t)tbl) & 0xFFFFF000;
-			ret->entries[i].as_uint32=paddr|PRESENT|READWRITE;
+			if(src->entries[i].as_uint32 == 0) ret->entries[i].as_uint32=0;
+			else
+			{
+				// Map ret's page dir to the end of the address space
+				clone_page_table(i);
+				ret->entries[i].flags=src->entries[i].flags;
+				ret->entries[i].addr=(ret_pdir_paddr >> 12);
+			}
 		}
 	}
+
+	kernel_pdir->entries[1021].as_uint32=0;
+	kernel_pdir->entries[1022].as_uint32=0;
+	flush_page_directory();
 	return ret;
 }
 
@@ -110,16 +152,6 @@ void setup_vmm(void)
 	print_startup_info("VMM", "OK\n");
 }
 
-static void new_page_table(unsigned pdi, uint32_t to)
-{
-	physaddr_t paddr=kalloc_page_frame();
-	kernel_pdir->entries[pdi].as_uint32=paddr|PRESENT|READWRITE;
-	for(unsigned i=0; i<1024; i++)
-	{// Zero out the page table
-		set_page_table_entry(pdi, i, 0);
-	}
-}
-
 vptr_t* kalloc_page_from(physaddr_t from, vaddr_t to)
 {
 	if(!from) PANIC();
@@ -130,9 +162,9 @@ vptr_t* kalloc_page_from(physaddr_t from, vaddr_t to)
 	unsigned pdi=to >> 22;
 	unsigned pti=(to & 0x003FFFFF) >> 12;
 
-	if(!(kernel_pdir->entries[pdi].flags & PRESENT))
+	if(!page_table_exists(pdi))
 	{
-		new_page_table(pdi, to);
+		new_page_table(pdi);
 	}
 	else if(get_page_table_entry(pdi, pti) & PRESENT)
 	{
@@ -141,7 +173,7 @@ vptr_t* kalloc_page_from(physaddr_t from, vaddr_t to)
 	}
 	if(is_free_page(from))
 	{
-		kprintf("Trying to map virtual memory address %x to %x\n", from, to);
+		kprintf("Trying to map physical memory address %x to %x\n", from, to);
 		PANIC();
 	}
 	set_page_table_entry(pdi, pti, from|PRESENT|READWRITE);
