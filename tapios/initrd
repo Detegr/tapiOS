@@ -1,7 +1,9 @@
- 
  _________________________________________ 
-/ Welcome to tapiOS! This message is here \
-\ to test the new feature: initrd         /
+/ Welcome to tapiOS! The cow you see here \
+| is a text file that is currently the    |
+| OS's initial ramdisk. It is used to     |
+| demonstrate the OS's capability to map  |
+\ and read an initrd.                     /
  ----------------------------------------- 
         \   ^__^
          \  (oo)\_______

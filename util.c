@@ -55,11 +55,25 @@ void panic(const char* file, uint32_t line)
 	_panic();
 }
 
-void* memcpy(void* dst, void* src, uint32_t size)
+void* memcpy(void* dst, const void* src, uint32_t size)
 {
 	for(uint32_t i=0; i<size; ++i)
 	{
 		((uint8_t*)dst)[i]=((uint8_t*)src)[i];
+	}
+	return dst;
+}
+
+void* memmove(void* dst, const void* src, uint32_t size)
+{
+	uint8_t buf[size];
+	for(uint32_t i=0; i<size; ++i)
+	{
+		buf[i]=((uint8_t*)src)[i];
+	}
+	for(uint32_t i=0; i<size; ++i)
+	{
+		((uint8_t*)dst)[i]=buf[i];
 	}
 	return dst;
 }

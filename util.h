@@ -74,6 +74,7 @@ uint8_t inb(uint16_t port);
 
 void panic(const char* file, uint32_t line);
 
-void* memcpy(void* dst, void* src, uint32_t size);
+void* memcpy(void* dst, const void* src, uint32_t size);
+void* memmove(void* dst, const void* src, uint32_t size);
 
 #endif

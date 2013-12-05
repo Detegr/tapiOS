@@ -2,10 +2,10 @@
 #include "util.h"
 #include <stdarg.h>
 
-volatile unsigned char* video = (unsigned char*)0xC00B8000;
+volatile uint8_t* video = (uint8_t*)0xC00B8000;
 
 static uint8_t col=0;
-static uint8_t row=0;
+static uint8_t row=25;
 
 void hide_cursor(void)
 {
@@ -41,15 +41,22 @@ static void printchar(const char c, uint8_t color)
 	{
 		col=0;
 		row++;
-		return;
 	}
-	*(video+(row*160)+col)=c;
-	*(video+(row*160)+col+1)=color;
-	col+=2;
-	if(col>=160)
+	else
 	{
-		col=0;
-		row++;
+		*(video+(row*160)+col)=c;
+		*(video+(row*160)+col+1)=color;
+		col+=2;
+		if(col>=160)
+		{
+			col=0;
+			row++;
+		}
+	}
+	if(row>24)
+	{ // Scroll the buffer
+		row=24;
+		memmove((uint8_t*)video, ((uint8_t*)video)+160, 25*160);
 	}
 }
 
@@ -116,8 +123,8 @@ void kprintf(const char* fmt, ...)
 				}
 				case 'c':
 				{
-					char c=va_arg(argp, int);
-					printchar(c, color);
+					int c=va_arg(argp, int);
+					printchar((char)c, color);
 					break;
 				}
 				case 'd':
@@ -147,4 +154,15 @@ void kprintf(const char* fmt, ...)
 	}
 	va_end(argp);
 	set_cursor(row, col/2);
+}
+
+void delete_last_char(void)
+{
+	if(row==0 && col==0) return;
+	else if(col==0) {row--;col=158;}
+	else col-=2;
+	kprintf("%c", ' ');
+	if(col==0) {row--;col=158;}
+	else col-=2;
+	set_cursor(row,col/2);
 }

@@ -1,14 +1,34 @@
 #include "irq.h"
+#include "scancodes.h"
 
 extern void _irq1_handler(void);
 extern void _page_fault(void);
 
 void irq1_handler(void)
 {
-	kprintf("Interrupt test!\n");
-	inb(0x60);
+	static int j=0;
+	uint8_t status=inb(0x64);
+	if(status & 0x1)
+	{
+		uint8_t data=inb(0x60);
+		char c=char_for_scancode(data);
+		if(c && c!= CHAR_UP && c!= CHAR_BACKSPACE)
+		{
+			kprintf("%c", c);
+		}
+		else if(c == CHAR_BACKSPACE)
+		{
+			delete_last_char();
+		}
+		else if(c != CHAR_UP)
+		{
+			//kprintf("\nUnhandled char: %x\n", data);
+		}
+	}
+	/*
 	uint8_t i=inb(0x61);
 	outb(0x61, i);
+	*/
 }
 void page_fault(void)
 {
