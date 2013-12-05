@@ -12,12 +12,14 @@ global _inb
 global _noop_int
 global _spurious_irq_check_master
 global _spurious_irq_check_slave
+global send_eoi
 
 extern _panic
 extern is_spurious_irq_master
 extern is_spurious_irq_slave
 extern pic_get_irq
 
+IRQ_HANDLER _timer_handler, timer_handler
 IRQ_HANDLER _irq1_handler, irq1_handler
 IRQ_HANDLER _page_fault, page_fault
 

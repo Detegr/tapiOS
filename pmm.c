@@ -89,7 +89,7 @@ void kfree_page_frame(physaddr_t addr)
 	if(!is_free_page(addr))
 	{
 		set_page_reserved(addr, false);
-		kprintf("Physical address %x freed.\n");
+		kprintf("Physical address %x freed.\n", addr);
 	}
 	else
 	{

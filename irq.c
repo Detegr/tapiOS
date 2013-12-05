@@ -1,8 +1,50 @@
 #include "irq.h"
 #include "scancodes.h"
+#include "util.h"
+#include "process.h"
+#include <stdint.h>
 
+extern void _timer_handler(void);
 extern void _irq1_handler(void);
 extern void _page_fault(void);
+
+void timer_handler(void)
+{
+	if(!current_process) return;
+
+	uint32_t esp, ebp, eip;
+	__asm__ volatile("mov %0, esp;"
+					 "mov %1, ebp;" : "=r"(esp), "=r"(ebp));
+
+	eip=_get_eip();
+	if(eip==0xADDEDBEE)
+	{
+		return; // Process switch occurred
+	}
+
+	// Switch process
+	current_process->eip=eip;
+	current_process->esp=esp;
+	current_process->ebp=ebp;
+	if(!current_process->next) current_process=process_list;
+	else current_process=current_process->next;
+
+	eip = current_process->eip;
+	esp = current_process->esp;
+	ebp = current_process->ebp;
+	current_pdir=current_process->pdir;
+	physaddr_t pageaddr=get_page((vaddr_t)current_pdir) & 0xFFFFF000;
+
+	__asm__ volatile("cli;"
+					 "mov ecx, %0;"
+					 "mov esp, %1;"
+					 "mov ebp, %2;"
+					 "mov cr3, %3;"
+					 "mov eax, 0xADDEDBEE;"
+					 "sti;"
+					 "jmp ecx;"
+					 :: "r"(eip), "r"(esp), "r"(ebp), "r"(pageaddr) : "eax","ecx");
+}
 
 void irq1_handler(void)
 {
@@ -30,9 +72,11 @@ void irq1_handler(void)
 	outb(0x61, i);
 	*/
 }
-void page_fault(void)
+void page_fault(int errno)
 {
-	kprintf("Page fault!\n");
+	vaddr_t addr;
+	__asm__ volatile("mov %0, cr2" : "=r"(addr));
+	kprintf("Page fault when trying to access %x\n", addr);
 	PANIC();
 }
 
@@ -45,6 +89,7 @@ void setup_idt(void)
 	}
 
 	idtentry(0x0E, (uint32_t)&_page_fault, CODE_SELECTOR, TRAP_INT32);
+	idtentry(0x20, (uint32_t)&_timer_handler, CODE_SELECTOR, GATE_INT32);
 	idtentry(0x21, (uint32_t)&_irq1_handler, CODE_SELECTOR, GATE_INT32);
 	idtentry(0x27, (uint32_t)&_spurious_irq_check_master, CODE_SELECTOR, GATE_INT32);
 	idtentry(0x2F, (uint32_t)&_spurious_irq_check_slave, CODE_SELECTOR, GATE_INT32);
@@ -78,7 +123,7 @@ void remap_pic(uint8_t offset1, uint8_t offset2)
 	outb(PIC1_DATA, ICW4_80X86_MODE);
 	outb(PIC2_DATA, ICW4_80X86_MODE);
 
-	outb(PIC1_DATA, 0xFD);
+	outb(PIC1_DATA, 0xFC); // Use IRQ0 and IRQ1
 	outb(PIC2_DATA, 0xFF);
 
 	__asm__ __volatile__("sti\n");

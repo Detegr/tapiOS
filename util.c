@@ -57,9 +57,11 @@ void panic(const char* file, uint32_t line)
 
 void* memcpy(void* dst, const void* src, uint32_t size)
 {
+	uint8_t* p1=(uint8_t*)dst;
+	uint8_t* p2=(uint8_t*)src;
 	for(uint32_t i=0; i<size; ++i)
 	{
-		((uint8_t*)dst)[i]=((uint8_t*)src)[i];
+		p1[i]=p2[i];
 	}
 	return dst;
 }
@@ -67,13 +69,37 @@ void* memcpy(void* dst, const void* src, uint32_t size)
 void* memmove(void* dst, const void* src, uint32_t size)
 {
 	uint8_t buf[size];
+	uint8_t* p1=(uint8_t*)dst;
+	uint8_t* p2=(uint8_t*)src;
 	for(uint32_t i=0; i<size; ++i)
 	{
-		buf[i]=((uint8_t*)src)[i];
+		buf[i]=p2[i];
 	}
 	for(uint32_t i=0; i<size; ++i)
 	{
-		((uint8_t*)dst)[i]=buf[i];
+		p1[i]=buf[i];
 	}
 	return dst;
+}
+
+void* memset(void* dst, uint8_t c, uint32_t n)
+{
+	uint8_t* dp=(uint8_t*)dst;
+	for(uint8_t i=0; i<c; ++i)
+	{
+		dp[i]=c;
+	}
+	return dst;
+}
+
+int memcmp(void* src1, void* src2, uint32_t n)
+{
+	uint8_t* p1=(uint8_t*)src1;
+	uint8_t* p2=(uint8_t*)src2;
+	for(uint32_t i=0; i<n; ++i)
+	{
+		if(p1[i] < p2[i]) return -1;
+		else if(p1[i] > p2[i]) return 1;
+	}
+	return 0;
 }

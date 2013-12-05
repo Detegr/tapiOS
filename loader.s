@@ -1,5 +1,6 @@
 global _start
 global _page_directory
+global stack
 extern kmain
                                            ; Paging stuff
 KERNEL_VMA equ 0xC0000000

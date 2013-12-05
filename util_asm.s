@@ -6,6 +6,7 @@ global _io_wait
 global _idle
 global _panic
 global _inb
+global _get_eip
 
 extern gdtptr
 extern idtptr
@@ -63,3 +64,7 @@ _idle:
 _panic:
 	cli
 	hlt
+
+_get_eip:
+	pop eax
+	jmp eax

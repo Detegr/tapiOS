@@ -28,6 +28,7 @@ typedef struct page_directory
 	page_directory_entry entries[1024];
 } page_directory;
 
+page_directory* current_pdir;
 
 vptr_t* kalloc_page(vaddr_t to);
 vptr_t* kalloc_page_from(physaddr_t from, vaddr_t to);

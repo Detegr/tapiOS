@@ -4,6 +4,8 @@
 #include "pmm.h"
 #include "vmm.h"
 #include "heap.h"
+#include "process.h"
+#include "timer.h"
 
 #define KERNEL_VMA 0xC0000000
 
@@ -60,8 +62,8 @@ void kmain(struct multiboot* b, uint32_t magic)
 {
 	cls();
 	setup_gdt();
-	setup_idt();
 	setup_pic();
+	setup_idt();
 	if(b->mods_count == 1)
 	{
 		uint32_t mods_start_addr=*(uint32_t*)(b->mods_addr);
@@ -70,13 +72,16 @@ void kmain(struct multiboot* b, uint32_t magic)
 	}
 	setup_bitmap();
 	setup_vmm();
+	set_timer_freq(100);
+	setup_multitasking();
 
 	b=(struct multiboot*)((uint8_t*)b+KERNEL_VMA);
 	uint32_t mods_addr=*(uint32_t*)(b->mods_addr + KERNEL_VMA) + KERNEL_VMA;
 
 	kprintf("\n%@Welcome to tapiOS!%@\nMod count: %d\n%@%s%@", 0x05, 0x07, b->mods_count, 0x03, (char*)mods_addr, 0x07);
-	page_directory* pd=clone_page_directory_from(DEBUG_get_kernel_pdir());
-	change_pdir(pd);
+
+	int pid=fork();
+	kprintf("Forked, pid: %d\n", pid);
 
 	while(1)
 	{

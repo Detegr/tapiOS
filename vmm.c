@@ -62,13 +62,13 @@ page_directory* DEBUG_get_kernel_pdir(void)
 
 static bool page_table_exists(uint32_t pdi)
 {
-	return kernel_pdir->entries[pdi].flags & PRESENT;
+	return current_pdir->entries[pdi].flags & PRESENT;
 }
 
 static void new_page_table(unsigned pdi)
 {
 	physaddr_t paddr=kalloc_page_frame();
-	kernel_pdir->entries[pdi].as_uint32=paddr|PRESENT|READWRITE;
+	current_pdir->entries[pdi].as_uint32=paddr|PRESENT|READWRITE;
 	for(unsigned i=0; i<1024; i++)
 	{// Zero out the page table
 		set_page_table_entry(pdi, i, 0);
@@ -77,51 +77,70 @@ static void new_page_table(unsigned pdi)
 
 static void clone_page_table(uint32_t i)
 {
-	for(int j=0; j<1021; ++j)
+	uint32_t* src=(uint32_t*)0xFF400000;
+	uint32_t* to=(uint32_t*)0xFF800000;
+	for(int j=0; j<1024; ++j)
 	{
-		if(get_page_table_entry(1021, j) != 0)
+		uint32_t pd_index=i * 0x400 + j;
+		if(src[pd_index] != 0)
 		{
-			kprintf("Copying %x -> %x, index: %d\n", get_page_table_entry(1021, j), get_page_table_entry(1022, j), j);
-			set_page_table_entry(1022, j, get_page_table_entry(1021, j));
+			physaddr_t srcaddr=src[pd_index] & 0xFFFFF000;
+			// Temporarily map the pages to 0xF0000000 and 0xF0001000
+			vptr_t* srcp=kalloc_page_from(srcaddr, 0xF0000000);
+			vptr_t* dstp=kalloc_page(0xF0001000);
+			invalidate_page((vaddr_t)srcp);
+			invalidate_page((vaddr_t)dstp);
+			physaddr_t paddr=get_page((vaddr_t)dstp) & 0xFFFFF000;
+
+			// Set physaddr of the copied page to copied page table
+			to[pd_index]=paddr|(src[pd_index] & 0x00000FFF);
+			memcpy(dstp, srcp, 0x1000);
+
+			// Unmap temporary pages
+			set_page((vaddr_t)srcp, 0);
+			set_page((vaddr_t)dstp, 0);
+			invalidate_page((vaddr_t)srcp);
+			invalidate_page((vaddr_t)dstp);
 		}
+		else to[pd_index]=0;
 	}
 }
 
 page_directory* clone_page_directory_from(page_directory* src)
 {
 	page_directory* ret=kmalloc(sizeof(page_directory));
-	kprintf("pdir size: %d, pdir: %x, entries addr: %x\n", sizeof(page_directory), ret, ret->entries);
+	memset(ret, 0, sizeof(page_directory));
 
 	physaddr_t src_pdir_paddr=get_page((vaddr_t)src);
-	physaddr_t ret_pdir_paddr=get_page((vaddr_t)ret);
+	physaddr_t ret_pdir_paddr=get_page((vaddr_t)ret) & 0xFFFFF000;
 
 	if(!page_table_exists(1021)) new_page_table(1021);
 	if(!page_table_exists(1022)) new_page_table(1022);
 
-	kernel_pdir->entries[1021].as_uint32=src_pdir_paddr|PRESENT|READWRITE;
-	kernel_pdir->entries[1022].as_uint32=ret_pdir_paddr|PRESENT|READWRITE;
-	flush_page_directory();
+	current_pdir->entries[1021].as_uint32=src_pdir_paddr|PRESENT|READWRITE;
+	current_pdir->entries[1022].as_uint32=ret_pdir_paddr|PRESENT|READWRITE;
 
-	for(int i=0; i<1024; ++i)
+	for(int i=0; i<1021; ++i)
 	{
+		if(src->entries[i].as_uint32 == 0) {ret->entries[i].as_uint32=0;continue;}
+
 		// If source entry is in kernel pdir, use it as it is not going to change.
-		//if(src->entries[i].as_uint32 == kernel_pdir->entries[i].as_uint32) ret->entries[i].as_uint32=kernel_pdir->entries[i].as_uint32;
-		//else
+		if(src->entries[i].as_uint32 == kernel_pdir->entries[i].as_uint32)
 		{
-			if(src->entries[i].as_uint32 == 0) ret->entries[i].as_uint32=0;
-			else
-			{
-				// Map ret's page dir to the end of the address space
-				clone_page_table(i);
-				ret->entries[i].flags=src->entries[i].flags;
-				ret->entries[i].addr=(ret_pdir_paddr >> 12);
-			}
+			ret->entries[i].as_uint32=kernel_pdir->entries[i].as_uint32;
+		}
+		else
+		{
+			physaddr_t paddr=kalloc_page_frame();
+			ret->entries[i].flags=src->entries[i].flags;
+			ret->entries[i].addr=(paddr >> 12);
+			clone_page_table(i);
 		}
 	}
 
-	kernel_pdir->entries[1021].as_uint32=0;
-	kernel_pdir->entries[1022].as_uint32=0;
-	flush_page_directory();
+	current_pdir->entries[1021].as_uint32=0;
+	current_pdir->entries[1022].as_uint32=0;
+	ret->entries[1023].as_uint32=ret_pdir_paddr|PRESENT|READWRITE;
 	return ret;
 }
 
@@ -133,6 +152,7 @@ void setup_vmm(void)
 	invalidate_page((uint32_t)&PAGE_DIRECTORY[1023]);
 
 	kernel_pdir=(page_directory*)pdir;
+	current_pdir=kernel_pdir;
 
 	// Remove identity mapping
 	for(int i=0; i<1024; ++i)
@@ -149,6 +169,7 @@ void setup_vmm(void)
 			kalloc_page_from(i - 0xC0000000, i);
 		}
 	}
+	change_pdir(clone_page_directory_from(kernel_pdir));
 	print_startup_info("VMM", "OK\n");
 }
 
@@ -199,4 +220,5 @@ void change_pdir(page_directory* pdir)
 	__asm__ volatile("mov eax, %0;"
 					 "mov cr3, eax;"
 					 :: "r"(get_page((vaddr_t)pdir) & 0xFFFFF000) : "eax");
+	current_pdir=pdir;
 }
