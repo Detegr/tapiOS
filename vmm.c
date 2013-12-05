@@ -1,6 +1,7 @@
 #include "pmm.h"
 #include "vmm.h"
 #include "vga.h"
+#include "heap.h"
 
 #define PRESENT 0x1
 #define READWRITE 0x2
@@ -11,6 +12,7 @@ extern uint32_t kernel_end_addr;
 extern void _invalidate_page_table(unsigned ptbl);
 extern uint32_t _page_directory;
 static uint32_t* pdir=&_page_directory;
+static page_directory* kernel_pdir=0;
 
 static inline void flush_page_directory(void)
 {
@@ -53,14 +55,32 @@ static void set_page_table_entry(uint16_t pdi, uint32_t pti, uint32_t flags)
 	invalidate_page((uint32_t)&PAGE_DIRECTORY[pd_index]);
 }
 
-static uint32_t get_page_directory_entry(uint32_t pdi)
+page_directory* DEBUG_get_kernel_pdir(void)
 {
-	return pdir[pdi];
+	return kernel_pdir;
 }
 
-static void set_page_directory_entry(uint32_t pdi, uint32_t flags)
+page_table* clone_page_table_from(page_table* src)
 {
-	pdir[pdi]=flags;
+	return NULL;
+}
+
+page_directory* clone_page_directory_from(page_directory* src)
+{
+	page_directory* ret=kmalloc(sizeof(page_directory));
+	kprintf("pdir size: %d, pdir: %x, entries addr: %x\n", sizeof(page_directory), ret, ret->entries);
+	for(int i=0; i<1024; ++i)
+	{
+		// If source entry is in kernel pdir, use it as it is not going to change.
+		if(src->entries[i].as_uint32 == kernel_pdir->entries[i].as_uint32) ret->entries[i].as_uint32=kernel_pdir->entries[i].as_uint32;
+		else
+		{
+			page_table* tbl=clone_page_table_from((page_table*)(src->entries[i].addr << 12));
+			physaddr_t paddr=get_page((vaddr_t)tbl) & 0xFFFFF000;
+			ret->entries[i].as_uint32=paddr|PRESENT|READWRITE;
+		}
+	}
+	return ret;
 }
 
 void setup_vmm(void)
@@ -69,6 +89,8 @@ void setup_vmm(void)
 	pdir[1023]=(((uint32_t)pdir) - 0xC0000000) & 0xFFFFF000;
 	pdir[1023] |= PRESENT|READWRITE;
 	invalidate_page((uint32_t)&PAGE_DIRECTORY[1023]);
+
+	kernel_pdir=(page_directory*)pdir;
 
 	// Remove identity mapping
 	for(int i=0; i<1024; ++i)
@@ -91,7 +113,7 @@ void setup_vmm(void)
 static void new_page_table(unsigned pdi, uint32_t to)
 {
 	physaddr_t paddr=kalloc_page_frame();
-	set_page_directory_entry(pdi, paddr|PRESENT|READWRITE);
+	kernel_pdir->entries[pdi].as_uint32=paddr|PRESENT|READWRITE;
 	for(unsigned i=0; i<1024; i++)
 	{// Zero out the page table
 		set_page_table_entry(pdi, i, 0);
@@ -108,7 +130,7 @@ vptr_t* kalloc_page_from(physaddr_t from, vaddr_t to)
 	unsigned pdi=to >> 22;
 	unsigned pti=(to & 0x003FFFFF) >> 12;
 
-	if(!(get_page_directory_entry(pdi) & PRESENT))
+	if(!(kernel_pdir->entries[pdi].flags & PRESENT))
 	{
 		new_page_table(pdi, to);
 	}
