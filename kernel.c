@@ -76,6 +76,7 @@ void kmain(struct multiboot* b, uint32_t magic)
 
 	kprintf("\n%@Welcome to tapiOS!%@\nMod count: %d\n%@%s%@", 0x05, 0x07, b->mods_count, 0x03, (char*)mods_addr, 0x07);
 	page_directory* pd=clone_page_directory_from(DEBUG_get_kernel_pdir());
+	change_pdir(pd);
 
 	while(1)
 	{

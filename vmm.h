@@ -39,5 +39,6 @@ page_directory* clone_page_directory_from(page_directory* src);
 void set_page_table_entry(uint16_t pdi, uint32_t pti, uint32_t flags);
 void set_page(vaddr_t addr, uint32_t flags);
 uint32_t get_page(vaddr_t addr);
+void change_pdir(page_directory* pdir);
 
 #endif

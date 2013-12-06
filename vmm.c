@@ -193,3 +193,10 @@ void kfree_page(vaddr_t from)
 	kfree_page_frame(paddr);
 	set_page(from, 0);
 }
+
+void change_pdir(page_directory* pdir)
+{
+	__asm__ volatile("mov eax, %0;"
+					 "mov cr3, eax;"
+					 :: "r"(get_page((vaddr_t)pdir) & 0xFFFFF000) : "eax");
+}
