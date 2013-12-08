@@ -55,6 +55,7 @@ void setup_multitasking(void)
 	memset((void*)current_process, 0, sizeof(process));
 	current_process->pid=nextpid++;
 	current_process->pdir=current_pdir;
+	current_process->next=NULL;
 	__asm__ volatile("sti;");
 
 	print_startup_info("Multitasking", "OK\n");
@@ -70,6 +71,7 @@ int fork(void)
 	memset(new, 0, sizeof(process));
 	new->pid=nextpid++;
 	new->pdir=pdir;
+	new->next=NULL;
 
 	process* p=(process*)process_list;
 	while(p->next) p=p->next;
