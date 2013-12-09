@@ -35,8 +35,21 @@ void timer_handler(void)
 	current_pdir=current_process->pdir;
 	physaddr_t pageaddr=get_page((vaddr_t)current_pdir) & 0xFFFFF000;
 
+	// Handle EOI here before switching the process
 	__asm__ volatile("cli;"
-					 "mov ecx, %0;"
+					 "call pic_get_irq;"
+					 "cmp al, 0xFF;"
+					 "je _panic;"
+					 "mov bl, al;"
+					 "mov al, 0x20;"
+					 "out 0x20, al;"
+					 "cmp bl, 0x8;"
+					 "jge .send_slave;"
+					 "jmp .finish;"
+					 ".send_slave: out 0xA0, al;"
+					 ".finish:");
+
+	__asm__ volatile("mov ecx, %0;"
 					 "mov esp, %1;"
 					 "mov ebp, %2;"
 					 "mov cr3, %3;"

@@ -25,7 +25,7 @@ IRQ_HANDLER _page_fault, page_fault
 
 send_eoi:
 	cmp al, 0xFF
-	je _panic
+	je send_eoi_fin ; EOI already handled in the handler
 	mov bl, al
 	mov al, 0x20
 	out 0x20, al
