@@ -3,7 +3,10 @@
 	extern %2
 	%1:
 	pushad
+	mov eax, [esp+32] ; Push possible error code
+	push eax
 	call %2
+	pop eax ; Pop error code
 	call pic_get_irq
 	jmp send_eoi
 %endmacro

@@ -3,13 +3,14 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "tss.h"
 
 #define NULL (void*)0x0
 #define PANIC() panic(__FILE__,__LINE__)
 
 // GDT selectors
-#define CODE_SELECTOR 0x08
-#define DATA_SELECTOR 0x10
+#define KERNEL_CODE_SELECTOR 0x08
+#define KERNEL_DATA_SELECTOR 0x10
 
 // Interrupt types
 #define GATE_INT32 0x8E
@@ -52,14 +53,16 @@ struct idt_ptr
 	unsigned int base;
 }__attribute__((packed));
 
-struct gdt_entry gdt[3];
+struct gdt_entry gdt[6];
 struct idt_entry idt[256];
+struct tss_entry tss;
 
 struct gdt_ptr gdtptr;
 struct idt_ptr idtptr;
 
 void gdtentry(int n, unsigned int base, unsigned int limit, unsigned char access, unsigned char flags);
 void idtentry(int n, uint32_t offset, uint16_t selector, uint8_t type);
+void tssentry(uint32_t n, uint16_t esp0, uint16_t ss0);
 
 uint8_t inb(uint16_t port);
 

@@ -19,8 +19,8 @@ void* kmalloc(uint32_t size)
 	vptr_t* ret=NULL;
 	for(int i=0; i<amount; ++i, kheap_end+=0x1000)
 	{
-		if(!ret) ret=kalloc_page(kheap_end);
-		else kalloc_page(kheap_end);
+		if(!ret) ret=kalloc_page(kheap_end, false, true);
+		else kalloc_page(kheap_end, false, true);
 	}
 	return ret;
 }

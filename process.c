@@ -14,7 +14,7 @@ static void copy_kernel_stack(vaddr_t to, uint32_t size)
 {
 	for(uint32_t i=0x1000; i<=size; i+=0x1000)
 	{
-		kalloc_page(to-i);
+		kalloc_page(to-i, false, true);
 	}
 	vptr_t* toptr=(vptr_t*)to;
 
@@ -55,7 +55,8 @@ void setup_multitasking(void)
 	memset((void*)current_process, 0, sizeof(process));
 	current_process->pid=nextpid++;
 	current_process->pdir=current_pdir;
-	current_process->next=NULL;
+	current_process->esp0=kmalloc(KERNEL_STACK_SIZE);
+	memset(current_process->esp0, 0, KERNEL_STACK_SIZE);
 	__asm__ volatile("sti;");
 
 	print_startup_info("Multitasking", "OK\n");
@@ -71,7 +72,8 @@ int fork(void)
 	memset(new, 0, sizeof(process));
 	new->pid=nextpid++;
 	new->pdir=pdir;
-	new->next=NULL;
+	new->esp0=kmalloc(KERNEL_STACK_SIZE);
+	memset(new->esp0, 0, KERNEL_STACK_SIZE);
 
 	process* p=(process*)process_list;
 	while(p->next) p=p->next;
@@ -99,3 +101,29 @@ int getpid(void)
 {
 	return current_process->pid;
 }
+
+void switch_to_usermode(void)
+{
+	tss.esp0=((vaddr_t)current_process->esp0)+KERNEL_STACK_SIZE;
+	__asm__ volatile(
+		"cli;"
+		"mov ax, 0x23;" // 0x20 (user data segment) | 0x03 (privilege level 3)
+		"mov ds, ax;"
+		"mov es, ax;"
+		"mov fs, ax;"
+		"mov gs, ax;"
+		"mov eax, esp;"
+		"push 0x23;" // Push user data segment
+		"push eax;"
+		"pushf;" // Push eflags
+		// Set interrupt flag enabled in eflags as we cannot use sti in user mode anymore
+		"pop eax;"
+		"or eax, 0x200;" // Set IF (interrupt flag)
+		"push eax;" // Push eflags back
+		"push 0x1B;" // 0x18 (user code segment) | 0x03 (privilege level 3)
+		"lea eax, 1f;"
+		"push eax;"
+		"iret;" // Return. Interrupts will be enabled as we changed eflags manually.
+		"1: ;");
+}
+

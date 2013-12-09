@@ -30,8 +30,8 @@ typedef struct page_directory
 
 page_directory* current_pdir;
 
-vptr_t* kalloc_page(vaddr_t to);
-vptr_t* kalloc_page_from(physaddr_t from, vaddr_t to);
+vptr_t* kalloc_page(vaddr_t to, bool kernel, bool readwrite);
+vptr_t* kalloc_page_from(physaddr_t from, vaddr_t to, bool kernel, bool readwrite);
 void kfree_page(vaddr_t from);
 void setup_vmm(void);
 page_directory* DEBUG_get_kernel_pdir(void);

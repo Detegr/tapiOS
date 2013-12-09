@@ -34,6 +34,7 @@ void timer_handler(void)
 	ebp = current_process->ebp;
 	current_pdir=current_process->pdir;
 	physaddr_t pageaddr=get_page((vaddr_t)current_pdir) & 0xFFFFF000;
+	tss.esp0=((vaddr_t)current_process->esp0)+KERNEL_STACK_SIZE;
 
 	// Handle EOI here before switching the process
 	__asm__ volatile("cli;"
@@ -89,7 +90,7 @@ void page_fault(int errno)
 {
 	vaddr_t addr;
 	__asm__ volatile("mov %0, cr2" : "=r"(addr));
-	kprintf("Page fault when trying to access %x\n", addr);
+	kprintf("Page fault in %s mode when %s%s.\nTried to access %x\n", errno & 0x1 ? "user" : "kernel", errno & 0x2 ? "writing" : "reading", errno & 0x4 ? ", protection violation" : "", addr);
 	PANIC();
 }
 
@@ -98,14 +99,14 @@ void setup_idt(void)
 	int i;
 	for(i=0; i<255; ++i)
 	{
-		idtentry(i, (uint32_t)&_noop_int, CODE_SELECTOR, GATE_INT32);
+		idtentry(i, (uint32_t)&_noop_int, KERNEL_CODE_SELECTOR, GATE_INT32);
 	}
 
-	idtentry(0x0E, (uint32_t)&_page_fault, CODE_SELECTOR, TRAP_INT32);
-	idtentry(0x20, (uint32_t)&_timer_handler, CODE_SELECTOR, GATE_INT32);
-	idtentry(0x21, (uint32_t)&_irq1_handler, CODE_SELECTOR, GATE_INT32);
-	idtentry(0x27, (uint32_t)&_spurious_irq_check_master, CODE_SELECTOR, GATE_INT32);
-	idtentry(0x2F, (uint32_t)&_spurious_irq_check_slave, CODE_SELECTOR, GATE_INT32);
+	idtentry(0x0E, (uint32_t)&_page_fault, KERNEL_CODE_SELECTOR, TRAP_INT32);
+	idtentry(0x20, (uint32_t)&_timer_handler, KERNEL_CODE_SELECTOR, GATE_INT32);
+	idtentry(0x21, (uint32_t)&_irq1_handler, KERNEL_CODE_SELECTOR, GATE_INT32);
+	idtentry(0x27, (uint32_t)&_spurious_irq_check_master, KERNEL_CODE_SELECTOR, GATE_INT32);
+	idtentry(0x2F, (uint32_t)&_spurious_irq_check_slave, KERNEL_CODE_SELECTOR, GATE_INT32);
 
 	idtptr.limit=sizeof(idt)-1;
 	idtptr.base=(unsigned int)&idt;

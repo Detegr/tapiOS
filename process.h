@@ -4,6 +4,9 @@
 #include <stdint.h>
 #include "pmm.h"
 #include "vmm.h"
+#include "util.h"
+
+#define KERNEL_STACK_SIZE 2048
 
 typedef struct process
 {
@@ -13,6 +16,7 @@ typedef struct process
 	uint32_t eip;
 	page_directory* pdir;
 	struct process* next;
+	vptr_t* esp0;
 } process;
 
 #ifndef SHARED_PROCESS_VARIABLES
@@ -25,5 +29,6 @@ void setup_multitasking(void);
 void switch_active_process(void);
 int fork(void);
 int getpid(void);
+void switch_to_usermode(void);
 
 #endif

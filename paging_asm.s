@@ -8,13 +8,16 @@ global _invalidate_page_table
 KERNEL_VMA equ 0xC0000000
 FLAG_PRESENT equ 0x1
 FLAG_READWRITE equ 0x2
+FLAG_USERMODE equ 0x4
+
+INITIAL_KERNEL_CODE_FLAGS equ FLAG_PRESENT|FLAG_USERMODE ; Map readable on user mode for testing
 
 _setup_page_table:
 	push eax
 	mov eax, ebx
 	call _calculate_directory_position    ; to edx
 	pop eax
-	or ecx, FLAG_PRESENT|FLAG_READWRITE
+	or ecx, INITIAL_KERNEL_CODE_FLAGS
 	mov [eax + edx * 4], ecx
 	ret
 
@@ -60,8 +63,8 @@ _map_page:
 		add eax, ebx                      ; page table + mapped bytes
 		mov ebx, [esp-4]  	              ; physical address
 
+		or ebx, INITIAL_KERNEL_CODE_FLAGS
 		mov [eax], ebx                    ; set physical address to correct page table
-		or DWORD [eax], FLAG_PRESENT|FLAG_READWRITE
 
 		add ebx, 0x1000                   ; advance to next page
 		mov [esp-4], ebx                  ; Physical address
@@ -85,11 +88,6 @@ __panic:
 _calculate_directory_position:
 	mov edx, eax
 	shr edx, 22                           ; Index in page directory
-	ret
-
-_set_kernel_tbl_index:
-	or ebx, FLAG_PRESENT|FLAG_READWRITE
-	mov [eax+edx], ebx                    ; Use index from edx
 	ret
 
 _enable_paging:

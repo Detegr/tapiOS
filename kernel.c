@@ -6,6 +6,7 @@
 #include "heap.h"
 #include "process.h"
 #include "timer.h"
+#include "tss.h"
 
 #define KERNEL_VMA 0xC0000000
 
@@ -43,9 +44,18 @@ void setup_gdt(void)
 	// Flat memory setup
 	gdtentry(1, 0, 0xFFFFFFFF, 0x9A, 0x0F); // 0x9A == read only (code segment), flags: 4kb blocks, 32 bit protected mode (0x0F)
 	gdtentry(2, 0, 0xFFFFFFFF, 0x92, 0x0F); // 0x92 == readwrite (data segment), flags: 4kb blocks, 32 bit protected mode (0x0F)
+	// User mode entries
+	gdtentry(3, 0, 0xFFFFFFFF, 0xFA, 0x0F); // User mode code segment (0x9A but privilege level 3)
+	gdtentry(4, 0, 0xFFFFFFFF, 0xF2, 0x0F); // User mode data segment (0x92 but privilege level 3)
+	// TSS
+	tssentry(5, 0x0, KERNEL_DATA_SELECTOR);
 	gdtptr.limit=sizeof(gdt)-1;
 	gdtptr.base=(unsigned int)&gdt;
 	_setgdt();
+	__asm__ volatile(
+		"mov ax, 0x2B;" // 5(gdt entry num)*8(bytes) | 0x03 (privilege level)
+		"ltr ax;" // Load task state register
+	);
 	print_startup_info("GDT", "OK\n");
 }
 
@@ -82,10 +92,11 @@ void kmain(struct multiboot* b, uint32_t magic)
 
 	int pid=fork();
 	kprintf("Forked, pid: %d\n", pid);
+	kprintf("Switching to user-mode...\n");
+	switch_to_usermode();
 
 	while(1)
 	{
-		_idle();
 	}
 	PANIC();
 }
