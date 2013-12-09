@@ -85,7 +85,7 @@ void* memmove(void* dst, const void* src, uint32_t size)
 void* memset(void* dst, uint8_t c, uint32_t n)
 {
 	uint8_t* dp=(uint8_t*)dst;
-	for(uint8_t i=0; i<c; ++i)
+	for(uint32_t i=0; i<n; ++i)
 	{
 		dp[i]=c;
 	}
