@@ -10,7 +10,7 @@ extern void _irq1_handler(void);
 extern void _page_fault(void);
 extern void _syscall(void);
 
-void timer_handler(void)
+void timer_handler(bool called_manually)
 {
 	if(!current_process) return;
 
@@ -39,18 +39,21 @@ void timer_handler(void)
 	tss.esp0=((vaddr_t)current_process->esp0)+KERNEL_STACK_SIZE;
 
 	// Handle EOI here before switching the process
-	__asm__ volatile("cli;"
-					 "call pic_get_irq;"
-					 "cmp al, 0xFF;"
-					 "je _panic;"
-					 "mov bl, al;"
-					 "mov al, 0x20;"
-					 "out 0x20, al;"
-					 "cmp bl, 0x8;"
-					 "jge .send_slave;"
-					 "jmp .finish;"
-					 ".send_slave: out 0xA0, al;"
-					 ".finish:");
+	if(!called_manually)
+	{
+		__asm__ volatile("cli;"
+						 "call pic_get_irq;"
+						 "cmp al, 0xFF;"
+						 "je _panic;"
+						 "mov bl, al;"
+						 "mov al, 0x20;"
+						 "out 0x20, al;"
+						 "cmp bl, 0x8;"
+						 "jge .send_slave;"
+						 "jmp .finish;"
+						 ".send_slave: out 0xA0, al;"
+						 ".finish:");
+	}
 
 	__asm__ volatile("mov ecx, %0;"
 					 "mov esp, %1;"

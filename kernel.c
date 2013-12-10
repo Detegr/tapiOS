@@ -8,6 +8,7 @@
 #include "timer.h"
 #include "tss.h"
 #include "syscalls.h"
+#include "elf.h"
 
 #define KERNEL_VMA 0xC0000000
 
@@ -69,6 +70,25 @@ void setup_pic(void)
 uint32_t kernel_end_addr=0;
 extern uint32_t __kernel_end;
 
+void setup_usermode_process(uint8_t* elf)
+{
+	elf_header header=*(elf_header*)elf;
+
+	char elf_magic[]={0x7F,'E','L','F'};
+	if(memcmp(&header, elf_magic, sizeof(elf_magic)) != 0)
+	{
+		kprintf("Elf header magic doesn't match\n");
+		return;
+	}
+	elf_program_entry* programs=(elf_program_entry*)(elf+header.program_table);
+	elf_section_entry* sections=(elf_section_entry*)(elf+header.section_table);
+
+	vptr_t* ptr=kalloc_page_from(vaddr_to_physaddr((vaddr_t)elf), programs[0].p_vaddr, false, false);
+
+	switch_to_usermode();
+	__asm__ volatile("jmp %0;" :: "r"(header.entry));
+}
+
 void kmain(struct multiboot* b, uint32_t magic)
 {
 	cls();
@@ -89,20 +109,12 @@ void kmain(struct multiboot* b, uint32_t magic)
 	b=(struct multiboot*)((uint8_t*)b+KERNEL_VMA);
 	uint32_t mods_addr=*(uint32_t*)(b->mods_addr + KERNEL_VMA) + KERNEL_VMA;
 
-	kprintf("\n%@Welcome to tapiOS!%@\nMod count: %d\n%@%s%@", 0x05, 0x07, b->mods_count, 0x03, (char*)mods_addr, 0x07);
+	kprintf("\n%@Welcome to tapiOS!%@\nMod count: %d\n\n", 0x05, 0x07, b->mods_count, 0x03);
 
 	int pid=fork();
-	switch_to_usermode();
-
-	if(pid!=0)
+	if(pid==0)
 	{
-		const char* str="\nThe parent process greets from the userspace :)\n";
-		__asm__ volatile("mov eax, %0; mov ebx, %1; mov ecx, %2; int 0x80;" :: "g"(WRITE), "g"(str), "g"(strlen(str)) : "eax","ebx","ecx");
-	}
-	else
-	{
-		const char* str="This is the child process, greeting through syscall 1 as well!\n";
-		__asm__ volatile("mov eax, %0; mov ebx, %1; mov ecx, %2; int 0x80;" :: "g"(WRITE), "g"(str), "g"(strlen(str)) : "eax","ebx","ecx");
+		setup_usermode_process((uint8_t*)mods_addr);
 	}
 
 	while(1) {}

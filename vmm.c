@@ -44,6 +44,11 @@ uint32_t get_page(vaddr_t addr)
 	return PAGE_DIRECTORY[pd_index];
 }
 
+uint32_t vaddr_to_physaddr(vaddr_t vaddr)
+{
+	return get_page(vaddr) & 0xFFFFF000;
+}
+
 static uint32_t get_page_table_entry(uint32_t pdi, uint32_t pti)
 {
 	return (uint32_t)PAGE_DIRECTORY[pdi * 0x400 + pti];

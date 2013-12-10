@@ -171,3 +171,8 @@ void delete_last_char(void)
 	else col-=2;
 	set_cursor(row,col/2);
 }
+
+void update_cursor(void)
+{
+	set_cursor(row, col/2);
+}

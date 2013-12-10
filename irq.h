@@ -14,5 +14,6 @@ uint8_t pic1_get_isr(void);
 uint8_t pic2_get_isr(void);
 uint8_t is_spurious_irq_master(void);
 uint8_t is_spurious_irq_slave(void);
+void timer_handler(bool);
 
 #endif
