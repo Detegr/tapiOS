@@ -141,7 +141,7 @@ page_directory* clone_page_directory_from(page_directory* src)
 		else
 		{
 			physaddr_t paddr=kalloc_page_frame();
-			ret->entries[i].as_uint32=paddr|0x7;
+			ret->entries[i].as_uint32=paddr|PRESENT|READWRITE|USERMODE;
 			clone_page_table(i);
 		}
 	}

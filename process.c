@@ -102,7 +102,7 @@ int getpid(void)
 	return current_process->pid;
 }
 
-void switch_to_usermode(void)
+void switch_to_usermode(vaddr_t entrypoint)
 {
 	tss.esp0=((vaddr_t)current_process->esp0)+KERNEL_STACK_SIZE;
 	__asm__ volatile(
@@ -121,9 +121,9 @@ void switch_to_usermode(void)
 		"or eax, 0x200;" // Set IF (interrupt flag)
 		"push eax;" // Push eflags back
 		"push 0x1B;" // 0x18 (user code segment) | 0x03 (privilege level 3)
-		"lea eax, 1f;"
+		"mov eax, %0;"
 		"push eax;"
 		"iret;" // Return. Interrupts will be enabled as we changed eflags manually.
-		"1: ;");
+		:: "r"(entrypoint) : "eax");
 }
 

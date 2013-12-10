@@ -29,6 +29,6 @@ void setup_multitasking(void);
 void switch_active_process(void);
 int fork(void);
 int getpid(void);
-void switch_to_usermode(void);
+void switch_to_usermode(vaddr_t entrypoint);
 
 #endif

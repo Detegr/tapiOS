@@ -85,8 +85,7 @@ void setup_usermode_process(uint8_t* elf)
 
 	vptr_t* ptr=kalloc_page_from(vaddr_to_physaddr((vaddr_t)elf), programs[0].p_vaddr, false, false);
 
-	switch_to_usermode();
-	__asm__ volatile("jmp %0;" :: "r"(header.entry));
+	switch_to_usermode(header.entry);
 }
 
 void kmain(struct multiboot* b, uint32_t magic)
