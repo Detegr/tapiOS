@@ -26,6 +26,14 @@ IRQ_HANDLER _timer_handler, timer_handler
 IRQ_HANDLER _irq1_handler, irq1_handler
 IRQ_HANDLER _page_fault, page_fault
 
+global _syscall
+extern syscall
+_syscall:
+	pushad
+	call syscall
+	popad
+	iret
+
 send_eoi:
 	cmp al, 0xFF
 	je send_eoi_fin ; EOI already handled in the handler

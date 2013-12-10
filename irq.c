@@ -2,11 +2,13 @@
 #include "scancodes.h"
 #include "util.h"
 #include "process.h"
+#include "syscalls.h"
 #include <stdint.h>
 
 extern void _timer_handler(void);
 extern void _irq1_handler(void);
 extern void _page_fault(void);
+extern void _syscall(void);
 
 void timer_handler(void)
 {
@@ -107,6 +109,7 @@ void setup_idt(void)
 	idtentry(0x21, (uint32_t)&_irq1_handler, KERNEL_CODE_SELECTOR, GATE_INT32);
 	idtentry(0x27, (uint32_t)&_spurious_irq_check_master, KERNEL_CODE_SELECTOR, GATE_INT32);
 	idtentry(0x2F, (uint32_t)&_spurious_irq_check_slave, KERNEL_CODE_SELECTOR, GATE_INT32);
+	idtentry(0x80, (uint32_t)&_syscall, KERNEL_CODE_SELECTOR, GATE_INT32_USER_PRIVILEGE);
 
 	idtptr.limit=sizeof(idt)-1;
 	idtptr.base=(unsigned int)&idt;

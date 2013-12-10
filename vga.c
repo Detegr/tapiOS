@@ -60,6 +60,11 @@ static void printchar(const char c, uint8_t color)
 	}
 }
 
+void kprintc(const char c)
+{
+	printchar(c, 0x07);
+}
+
 static void print(const char* str, uint8_t color)
 {
 	const char* s;

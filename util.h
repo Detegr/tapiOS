@@ -14,6 +14,7 @@
 
 // Interrupt types
 #define GATE_INT32 0x8E
+#define GATE_INT32_USER_PRIVILEGE 0xEE // 0x83 | 0x60
 #define TRAP_INT32 0x8F
 
 extern void _spurious_irq_check_master(void);
@@ -81,6 +82,7 @@ void* memcpy(void* dst, const void* src, uint32_t size);
 void* memmove(void* dst, const void* src, uint32_t size);
 void* memset(void* dst, uint8_t c, uint32_t n);
 int memcmp(void* src1, void* src2, uint32_t n);
+int strlen(const char* str);
 extern uint32_t _get_eip(void);
 
 #endif

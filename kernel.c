@@ -7,6 +7,7 @@
 #include "process.h"
 #include "timer.h"
 #include "tss.h"
+#include "syscalls.h"
 
 #define KERNEL_VMA 0xC0000000
 
@@ -91,12 +92,20 @@ void kmain(struct multiboot* b, uint32_t magic)
 	kprintf("\n%@Welcome to tapiOS!%@\nMod count: %d\n%@%s%@", 0x05, 0x07, b->mods_count, 0x03, (char*)mods_addr, 0x07);
 
 	int pid=fork();
-	kprintf("Forked, pid: %d\n", pid);
-	kprintf("Switching to user-mode...\n");
 	switch_to_usermode();
 
-	while(1)
+	if(pid!=0)
 	{
+		const char* str="\nThe parent process greets from the userspace :)\n";
+		__asm__ volatile("mov eax, %0; mov ebx, %1; mov ecx, %2; int 0x80;" :: "g"(WRITE), "g"(str), "g"(strlen(str)) : "eax","ebx","ecx");
 	}
+	else
+	{
+		const char* str="This is the child process, greeting through syscall 1 as well!\n";
+		__asm__ volatile("mov eax, %0; mov ebx, %1; mov ecx, %2; int 0x80;" :: "g"(WRITE), "g"(str), "g"(strlen(str)) : "eax","ebx","ecx");
+	}
+
+	while(1) {}
+
 	PANIC();
 }

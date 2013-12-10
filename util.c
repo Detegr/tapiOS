@@ -116,3 +116,10 @@ int memcmp(void* src1, void* src2, uint32_t n)
 	}
 	return 0;
 }
+
+int strlen(const char* str)
+{
+	int len=0;
+	while(*str++) len++;
+	return len;
+}
