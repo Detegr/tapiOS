@@ -11,28 +11,32 @@ global _start
 
 _start:
 	mov eax, 0x2
-	mov ebx, str
-	mov ecx, strlen
+	mov ebx, 0x0 ; Not used
+	mov ecx, str
+	mov edx, strlen
 	int 0x80
 loop:
 	mov eax, 0x3
-	mov ebx, buf
-	mov ecx, 32
+	mov ebx, 0x0 ; Not used
+	mov ecx, buf
+	mov edx, 32
 	int 0x80
 	mov edi, eax
 	mov eax, 0x2
-	mov ebx, str2
-	mov ecx, strlen2
+	mov ebx, 0x0 ; Not used
+	mov ecx, str2
+	mov edx, strlen2
 	int 0x80
-	mov ecx, edi
+	mov edx, edi
 	mov eax, 0x2
-	mov ebx, buf
+	mov ecx, buf
 	int 0x80
 	mov eax, 0x2
-	mov ebx, linebreak
-	mov ecx, 1
+	mov ecx, linebreak
+	mov edx, 1
 	int 0x80
 	jmp loop
 exit:
 	mov eax, 0x1
+	mov ebx, 0x0
 	int 0x80
