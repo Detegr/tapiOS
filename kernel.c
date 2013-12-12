@@ -83,13 +83,18 @@ void setup_usermode_process(uint8_t* elf)
 	elf_program_entry* programs=(elf_program_entry*)(elf+header.program_table);
 	elf_section_entry* sections=(elf_section_entry*)(elf+header.section_table);
 
-	vptr_t* ptr=kalloc_page_from(vaddr_to_physaddr((vaddr_t)elf), programs[0].p_vaddr, false, false);
+	for(int i=0; i<header.program_entries; ++i)
+	{
+		int page_offset_from_elf=programs[i].p_offset / 0x1000;
+		kalloc_page_from(vaddr_to_physaddr((vaddr_t)elf + (page_offset_from_elf * 0x1000)), programs[i].p_vaddr, false, true);
+	}
 
 	switch_to_usermode(header.entry);
 }
 
 void kmain(struct multiboot* b, uint32_t magic)
 {
+	hide_cursor();
 	cls();
 	setup_gdt();
 	setup_pic();
@@ -116,7 +121,7 @@ void kmain(struct multiboot* b, uint32_t magic)
 		setup_usermode_process((uint8_t*)mods_addr);
 	}
 
-	while(1) {}
+	__asm__ volatile("hltloop: hlt; jmp hltloop");
 
 	PANIC();
 }

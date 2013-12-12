@@ -31,6 +31,7 @@ extern syscall
 _syscall:
 	pushad
 	call syscall
+	mov [esp+28], eax ; Replace old eax with return value
 	popad
 	iret
 

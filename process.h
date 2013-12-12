@@ -17,6 +17,9 @@ typedef struct process
 	page_directory* pdir;
 	struct process* next;
 	vptr_t* esp0;
+	bool active;
+	uint8_t keyp;
+	char keybuf[256];
 } process;
 
 #ifndef SHARED_PROCESS_VARIABLES
@@ -26,7 +29,7 @@ volatile process* process_list;
 #endif
 
 void setup_multitasking(void);
-void switch_active_process(void);
+process* find_active_process(void);
 int fork(void);
 int getpid(void);
 void switch_to_usermode(vaddr_t entrypoint);

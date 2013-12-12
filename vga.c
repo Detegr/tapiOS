@@ -42,6 +42,10 @@ static void printchar(const char c, uint8_t color)
 		col=0;
 		row++;
 	}
+	else if(c=='\r')
+	{
+		col=0;
+	}
 	else
 	{
 		*(video+(row*160)+col)=c;
@@ -158,21 +162,24 @@ void kprintf(const char* fmt, ...)
 		}
 	}
 	va_end(argp);
-	set_cursor(row, col/2);
 }
 
-void delete_last_char(void)
+void delete_last_char(int minrow)
 {
 	if(row==0 && col==0) return;
 	else if(col==0) {row--;col=158;}
 	else col-=2;
 	kprintf("%c", ' ');
-	if(col==0) {row--;col=158;}
-	else col-=2;
-	set_cursor(row,col/2);
+	if(col==0 && row>minrow) {row--;col=158;}
+	else if(col>0) col-=2;
 }
 
 void update_cursor(void)
 {
 	set_cursor(row, col/2);
+}
+
+int get_cursor_row(void)
+{
+	return row;
 }

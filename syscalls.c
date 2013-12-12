@@ -2,8 +2,9 @@
 #include "process.h"
 #include "vga.h"
 #include "irq.h"
+#include "scancodes.h"
 
-void syscall(void)
+int syscall(void)
 {
 	int call, ebx, ecx, edx;
 	__asm__ volatile("mov %0, eax;" : "=r"(call) :: "eax");
@@ -18,7 +19,7 @@ void syscall(void)
 			if(process_list == current_process)
 			{
 				process_list=process_list->next;
-				timer_handler(true);
+				__asm__ volatile("sti; hlt");
 				break;
 			}
 			while(true)
@@ -26,7 +27,7 @@ void syscall(void)
 				if(p->next==current_process)
 				{
 					p->next=current_process->next;
-					timer_handler(true);
+					__asm__ volatile("sti; hlt");
 					break;
 				}
 				p=p->next;
@@ -40,9 +41,53 @@ void syscall(void)
 			{
 				kprintc(str[i]);
 			}
+			break;
+		}
+		case READ:
+		{
+			process* p=find_active_process();
+			if(!p) PANIC();
+			memset(p->keybuf, 0, 256);
+			p->keyp=0;
+			int prevkp=p->keyp;
+			int row=get_cursor_row();
 			update_cursor();
+			while(true)
+			{
+				prevkp=p->keyp;
+				__asm__ volatile("sti;hlt");
+				if(p->keyp==0) continue;
+				for(int i=prevkp; i<=p->keyp-1; ++i)
+				{
+					char c=char_for_scancode(p->keybuf[i]);
+					if(c==CHAR_UP || c==CHAR_UNHANDLED) continue;
+					else if(c==CHAR_BACKSPACE) delete_last_char(row);
+					else kprintc(c);
+					update_cursor();
+					if(c=='\n') goto done;
+				}
+			}
+done:
+			hide_cursor();
+			uint8_t* buf=(uint8_t*)ebx;
+			int j=0;
+			for(int i=0; i<p->keyp-1; ++i)
+			{
+				char c=char_for_scancode(p->keybuf[i]);
+				if(c==CHAR_UNHANDLED || c==CHAR_UP) continue;
+				else if(c=='\n') break;
+				else if(c==CHAR_BACKSPACE)
+				{
+					if(j==0) continue;
+					else if(j<0) PANIC();
+					buf[j--]=0;
+				}
+				else buf[j++]=c;
+			}
+			return j;
 		}
 		default:
 			break;
 	}
+	return 0;
 }

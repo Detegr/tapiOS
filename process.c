@@ -53,7 +53,8 @@ void setup_multitasking(void)
 	process_list=kmalloc(sizeof(process));
 	current_process=process_list;
 	memset((void*)current_process, 0, sizeof(process));
-	current_process->pid=nextpid++;
+	current_process->active=false;
+	current_process->pid=0;
 	current_process->pdir=current_pdir;
 	current_process->esp0=kmalloc(KERNEL_STACK_SIZE);
 	memset(current_process->esp0, 0, KERNEL_STACK_SIZE);
@@ -70,6 +71,7 @@ int fork(void)
 	page_directory* pdir=clone_page_directory_from(current_process->pdir);
 	process* new=kmalloc(sizeof(process));
 	memset(new, 0, sizeof(process));
+	new->active=false;
 	new->pid=nextpid++;
 	new->pdir=pdir;
 	new->esp0=kmalloc(KERNEL_STACK_SIZE);
@@ -105,6 +107,7 @@ int getpid(void)
 void switch_to_usermode(vaddr_t entrypoint)
 {
 	tss.esp0=((vaddr_t)current_process->esp0)+KERNEL_STACK_SIZE;
+	current_process->active=true;
 	__asm__ volatile(
 		"cli;"
 		"mov ax, 0x23;" // 0x20 (user data segment) | 0x03 (privilege level 3)
@@ -115,7 +118,7 @@ void switch_to_usermode(vaddr_t entrypoint)
 		"mov eax, esp;"
 		"push 0x23;" // Push user data segment
 		"push eax;"
-		"pushf;" // Push eflags
+		"pushfd;" // Push eflags
 		// Set interrupt flag enabled in eflags as we cannot use sti in user mode anymore
 		"pop eax;"
 		"or eax, 0x200;" // Set IF (interrupt flag)
@@ -127,3 +130,14 @@ void switch_to_usermode(vaddr_t entrypoint)
 		:: "r"(entrypoint) : "eax");
 }
 
+process* find_active_process(void)
+{
+	process* p=(process*)process_list;
+	while(!p->active)
+	{
+		if(!p) PANIC();
+		if(!p->next) return NULL;
+		p=p->next;
+	}
+	return p;
+}

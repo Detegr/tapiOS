@@ -3,7 +3,8 @@
 
 #define EXIT  1
 #define WRITE 2
+#define READ  3
 
-void syscall(void);
+int syscall(void);
 
 #endif
