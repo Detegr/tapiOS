@@ -33,7 +33,7 @@ struct dirent
 };
 
 struct dirent dirent;
-static fs_node root_fs=NULL;
+static fs_node root_fs;
 
 uint32_t fs_read(fs_node* node, uint32_t size, uint8_t* from);
 struct dirent* fs_readdir(fs_node* node);

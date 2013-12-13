@@ -108,7 +108,6 @@ static struct dirent* ext2_readdir(fs_node* node)
 	{
 		prevnode=node;
 		inode=read_inode(node->superblock, node->inode);
-		kprintf("%x\n", inode->type_and_permissions);
 		if(!(inode->type_and_permissions & 0x4000))
 		{
 			kprintf("Inode is not a directory\n");

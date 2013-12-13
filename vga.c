@@ -167,8 +167,8 @@ void kprintf(const char* fmt, ...)
 void delete_last_char(int minrow)
 {
 	if(row==0 && col==0) return;
-	else if(col==0) {row--;col=158;}
-	else col-=2;
+	if(col==0 && row>minrow) {row--;col=158;}
+	else if(col>0) col-=2;
 	kprintf("%c", ' ');
 	if(col==0 && row>minrow) {row--;col=158;}
 	else if(col>0) col-=2;
