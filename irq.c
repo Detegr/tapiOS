@@ -102,7 +102,7 @@ void setup_idt(void)
 	idtptr.limit=sizeof(idt)-1;
 	idtptr.base=(unsigned int)&idt;
 	_setidt();
-	print_startup_info("IDT", "OK\n");
+	print_startup_info("IDT", true);
 }
 
 #define PIC1 0x20

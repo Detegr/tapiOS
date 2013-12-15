@@ -20,7 +20,7 @@ void setup_bitmap(void)
 	{
 		set_page_reserved(i, true);
 	}
-	print_startup_info("PMM", "OK\n");
+	print_startup_info("PMM", true);
 }
 
 bool is_free_page(physaddr_t addr)

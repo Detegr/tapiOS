@@ -106,9 +106,9 @@ static void printi(uint32_t i, int color)
 	print(p, color);
 }
 
-inline void print_startup_info(const char* section, const char* msg)
+inline void print_startup_info(const char* section, bool ok)
 {
-	kprintf("%@[%@%s%@]%@ %s", 0x0F, 0x09, section, 0x0F, 0x07, msg);
+	kprintf("%s %@[%@%s%@]\n", section, 0x0F, ok?0x09:0x0C, ok?"OK":"FAIL", 0x0F);
 }
 
 void kprintf(const char* fmt, ...)

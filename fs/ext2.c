@@ -132,7 +132,7 @@ fs_node* ext2_fs_init(uint8_t* fs_data)
 	ext2_superblock* sb=(ext2_superblock*)(fs_data+SUPERBLOCK_OFFSET);
 	if(sb->ext2_signature != 0xef53)
 	{
-		kprintf("Ext2 signature mismatch, aborting...\n");
+		print_startup_info("ext2", false);
 		return NULL;
 	}
 	fs_node* ret=kmalloc(sizeof(fs_node));
@@ -146,6 +146,6 @@ fs_node* ext2_fs_init(uint8_t* fs_data)
 	ret->superblock=sb;
 	ret->link=NULL;
 	ret->actions.fs_readdir=&ext2_readdir;
-	print_startup_info("ext2", "OK\n");
+	print_startup_info("ext2", true);
 	return ret;
 }

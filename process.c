@@ -60,7 +60,7 @@ void setup_multitasking(void)
 	memset(current_process->esp0, 0, KERNEL_STACK_SIZE);
 	__asm__ volatile("sti;");
 
-	print_startup_info("Multitasking", "OK\n");
+	print_startup_info("Multitasking", true);
 }
 
 int fork(void)

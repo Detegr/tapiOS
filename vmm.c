@@ -178,7 +178,7 @@ void setup_vmm(void)
 		}
 	}
 	change_pdir(clone_page_directory_from(kernel_pdir));
-	print_startup_info("VMM", "OK\n");
+	print_startup_info("VMM", true);
 }
 
 vptr_t* kalloc_page_from(physaddr_t from, vaddr_t to, bool kernel, bool readwrite)

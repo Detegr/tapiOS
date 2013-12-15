@@ -60,13 +60,13 @@ void setup_gdt(void)
 		"mov ax, 0x2B;" // 5(gdt entry num)*8(bytes) | 0x03 (privilege level)
 		"ltr ax;" // Load task state register
 	);
-	print_startup_info("GDT", "OK\n");
+	print_startup_info("GDT", true);
 }
 
 void setup_pic(void)
 {
 	remap_pic(0x20, 0x28);
-	print_startup_info("PIC", "OK\n");
+	print_startup_info("PIC", true);
 }
 
 uint32_t kernel_end_addr=0;
