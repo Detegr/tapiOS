@@ -92,6 +92,7 @@ void setup_usermode_process(uint8_t* elf)
 	}
 
 	switch_to_usermode(header.entry);
+	current_process->brk=programs[0].p_vaddr + programs[0].p_filesz;
 }
 
 void kmain(struct multiboot* b, uint32_t magic)
@@ -119,19 +120,19 @@ void kmain(struct multiboot* b, uint32_t magic)
 
 	kprintf("\n%@Welcome to tapiOS!%@\nMod count: %d\n\n", 0x05, 0x07, b->mods_count, 0x03);
 
+	/*
 	struct dirent* ent=NULL;
 	while((ent=fs_readdir(root)))
 	{
 		kprintf("%s\n", ent->name);
 	}
+	*/
 
-	/*
 	int pid=fork();
 	if(pid==0)
 	{
 		setup_usermode_process((uint8_t*)mods_addr);
 	}
-	*/
 
 	__asm__ volatile("hltloop: hlt; jmp hltloop");
 
