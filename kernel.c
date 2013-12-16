@@ -88,11 +88,13 @@ void setup_usermode_process(uint8_t* elf)
 	for(int i=0; i<header.program_entries; ++i)
 	{
 		int page_offset_from_elf=programs[i].p_offset / 0x1000;
-		kalloc_page_from(vaddr_to_physaddr((vaddr_t)elf + (page_offset_from_elf * 0x1000)), programs[i].p_vaddr, false, true);
+		for(uint32_t j=0; j<=programs[i].p_filesz/0x1000; ++j)
+		{
+			kalloc_page_from(vaddr_to_physaddr((vaddr_t)elf + (page_offset_from_elf * 0x1000) + (j*0x1000)), programs[i].p_vaddr + (j*0x1000), false, true);
+		}
 	}
-
-	switch_to_usermode(header.entry);
 	current_process->brk=programs[0].p_vaddr + programs[0].p_filesz;
+	switch_to_usermode(header.entry);
 }
 
 void kmain(struct multiboot* b, uint32_t magic)
