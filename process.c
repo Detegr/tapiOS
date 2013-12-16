@@ -76,6 +76,7 @@ int fork(void)
 	new->pdir=pdir;
 	new->esp0=kmalloc(KERNEL_STACK_SIZE);
 	memset(new->esp0, 0, KERNEL_STACK_SIZE);
+	memset(new->stdoutbuf, 0, 256);
 
 	process* p=(process*)process_list;
 	while(p->next) p=p->next;

@@ -18,9 +18,11 @@ typedef struct process
 	struct process* next;
 	vptr_t* esp0;
 	bool active;
-	uint8_t keyp;
 	vaddr_t brk;
+
+	uint8_t keyp;
 	char keybuf[256];
+	char stdoutbuf[256]; // Just a hack before any better implementation
 } process;
 
 #ifndef SHARED_PROCESS_VARIABLES
