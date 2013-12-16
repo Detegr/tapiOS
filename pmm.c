@@ -65,14 +65,12 @@ physaddr_t kalloc_page_frame(void)
 	{
 		if(bitmap[i] != 0xFFFFFFFF)
 		{
-			for(int bit=31, j=0; bit; bit--, j++)
-			{
-				if(((bitmap[i] >> bit) & 0x1) == 0)
-				{
-					bitmap[i] |= 1<<(31-j);
-					return (i * 0x1000 * 32) + (j * 0x1000);
-				}
-			}
+			int lsb=0;
+			__asm__ volatile("bsf %0, %1" : "=g"(lsb) : "g"(bitmap[i]));
+			if(lsb > 0) bitmap[i] |= 1<<(lsb-1);
+			else bitmap[i] |= 1<<31;
+			if(lsb==0) lsb=32;
+			return (i * 0x1000 * 32) + ((32-lsb) * 0x1000);
 		}
 	}
 	return (physaddr_t)0x0;
