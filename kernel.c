@@ -9,7 +9,7 @@
 #include "tss.h"
 #include "syscalls.h"
 #include "elf.h"
-#include "vfs.h"
+#include "fs/vfs.h"
 #include "fs/ext2.h"
 
 #define KERNEL_VMA 0xC0000000

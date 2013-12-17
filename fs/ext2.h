@@ -2,7 +2,7 @@
 #define _TAPIOS_EXT2_H_
 
 #include <stdint.h>
-#include "../vfs.h"
+#include "vfs.h"
 
 typedef struct
 {
