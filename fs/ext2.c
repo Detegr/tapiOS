@@ -4,6 +4,7 @@
 #include "../pmm.h"
 #include "../vmm.h"
 #include "../heap.h"
+#include <stdbool.h>
 
 #define SUPERBLOCK_SIZE 1024
 #define SUPERBLOCK_OFFSET 1024
@@ -85,12 +86,12 @@ static ext2_inode* read_inode(ext2_superblock* b, int inode_index)
 	return NULL;*/
 }
 
-static struct dirent* ext2_readdir(fs_node* node)
+static struct dirent* ext2_readdir(struct inode *node)
 {
-	static ext2_inode* inode=NULL;
-	static ext2_directory* bdir=NULL;
-	static ext2_directory* dir=NULL;
-	static fs_node* prevnode=NULL;
+	static ext2_inode *inode=NULL;
+	static ext2_directory *bdir=NULL;
+	static ext2_directory *dir=NULL;
+	static struct inode *prevnode=NULL;
 
 	if(prevnode==node)
 	{
@@ -107,7 +108,7 @@ static struct dirent* ext2_readdir(fs_node* node)
 	else
 	{
 		prevnode=node;
-		inode=read_inode(node->superblock, node->inode);
+		inode=read_inode(node->superblock, node->inode_no);
 		if(!(inode->type_and_permissions & 0x4000))
 		{
 			kprintf("Inode is not a directory\n");
@@ -127,7 +128,46 @@ static struct dirent* ext2_readdir(fs_node* node)
 	}
 }
 
-fs_node* ext2_fs_init(uint8_t* fs_data)
+static inline bool inside_dir(ext2_directory *dir, ext2_directory *dir_base)
+{
+	return (dir && ((uint32_t)dir-(uint32_t)dir_base < 1024));
+}
+
+static inline uint32_t min(uint32_t a, uint32_t b)
+{
+	if(a<b) return a; else return b;
+}
+
+struct inode *ext2_search(struct inode *node, const char *name)
+{
+	ext2_inode *inode=read_inode(node->superblock, node->inode_no);
+	if(!(inode->type_and_permissions & 0x4000)) return NULL; // Searching non-directories makes no sense
+	// TODO: Other data blocks
+	ext2_directory *bdir;
+	ext2_directory *dir=bdir=get_block(node->superblock, inode->block0);
+	while(inside_dir(dir, bdir))
+	{
+		if(strlen(name) == dir->name_length_low)
+		{
+			if(memcmp(&dir->name, name, dir->name_length_low) == 0)
+			{
+				ext2_inode *retinode=read_inode(node->superblock, dir->inode);
+				struct inode *ret=kmalloc(sizeof(struct inode)); // TODO: Free
+				memcpy(ret->name, &dir->name, dir->name_length_low);
+				ret->inode_no=dir->inode;
+				ret->flags=retinode->type_and_permissions;
+				ret->size=retinode->size_low;
+				ret->superblock=node->superblock;
+				ret->actions=node->actions;
+				return ret;
+			}
+		}
+		dir=advance(dir);
+	}
+	return NULL;
+}
+
+struct inode *ext2_fs_init(uint8_t *fs_data)
 {
 	ext2_superblock* sb=(ext2_superblock*)(fs_data+SUPERBLOCK_OFFSET);
 	if(sb->ext2_signature != 0xef53)
@@ -135,17 +175,17 @@ fs_node* ext2_fs_init(uint8_t* fs_data)
 		print_startup_info("ext2", false);
 		return NULL;
 	}
-	fs_node* ret=kmalloc(sizeof(fs_node));
+	struct inode *ret=kmalloc(sizeof(struct inode));
 	//int blockgroup_count=((sb->blocks+(sb->blocks_in_blockgroup-1))/sb->blocks_in_blockgroup);
 	ext2_inode* inode=read_inode(sb, 2); // inode 2 is always the root node
 	ext2_directory* d=get_block(sb, inode->block0);
 	memcpy(ret->name, &d->name, d->name_length_low);
-	ret->inode=2;
+	ret->inode_no=2;
 	ret->flags=inode->type_and_permissions;
-	ret->length=inode->size_low;
+	ret->size=inode->size_low;
 	ret->superblock=sb;
-	ret->link=NULL;
-	ret->actions.fs_readdir=&ext2_readdir;
+	ret->actions=kmalloc(sizeof(struct inode_actions));
+	ret->actions->search=&ext2_search;
 	print_startup_info("ext2", true);
 	return ret;
 }

@@ -81,8 +81,9 @@ void panic(const char* file, uint32_t line);
 void* memcpy(void* dst, const void* src, uint32_t size);
 void* memmove(void* dst, const void* src, uint32_t size);
 void* memset(void* dst, uint8_t c, uint32_t n);
-int memcmp(void* src1, void* src2, uint32_t n);
+int memcmp(const void* src1, const void* src2, uint32_t n);
 int strlen(const char* str);
+char *strtok(char *str, const char delim);
 extern uint32_t _get_eip(void);
 
 #endif

@@ -105,7 +105,7 @@ void* memset(void* dst, uint8_t c, uint32_t n)
 	return dst;
 }
 
-int memcmp(void* src1, void* src2, uint32_t n)
+int memcmp(const void* src1, const void* src2, uint32_t n)
 {
 	uint8_t* p1=(uint8_t*)src1;
 	uint8_t* p2=(uint8_t*)src2;
@@ -122,4 +122,26 @@ int strlen(const char* str)
 	int len=0;
 	while(*str++) len++;
 	return len;
+}
+
+char *strtok(char *str, const char delim)
+{
+	static char *lastp=NULL;
+	if(!lastp && !str) return NULL;
+
+	char* p=str?str:lastp;
+	while(*p == delim) ++p;
+	if(!*p) return NULL;
+	char *oldp=p;
+	for(; *p; ++p)
+	{
+		if(*p == delim)
+		{
+			*p=0;
+			lastp=p+1;
+			return oldp;
+		}
+	}
+	lastp=NULL;
+	return oldp;
 }

@@ -118,7 +118,9 @@ void kmain(struct multiboot* b, uint32_t magic)
 	b=(struct multiboot*)((uint8_t*)b+KERNEL_VMA);
 	uint32_t mods_addr=*(uint32_t*)(b->mods_addr + KERNEL_VMA) + KERNEL_VMA;
 
-	fs_node* root=ext2_fs_init((uint8_t*)mods_addr);
+	struct inode *root=ext2_fs_init((uint8_t*)mods_addr);
+	struct inode *node=vfs_search(root, "/dir/file.txt");
+	if(node) kprintf("%s\n", node->name);
 
 	kprintf("\n%@Welcome to tapiOS!%@\nMod count: %d\n\n", 0x05, 0x07, b->mods_count, 0x03);
 
@@ -130,11 +132,13 @@ void kmain(struct multiboot* b, uint32_t magic)
 	}
 	*/
 
+	/*
 	int pid=fork();
 	if(pid==0)
 	{
 		setup_usermode_process((uint8_t*)mods_addr);
 	}
+	*/
 
 	__asm__ volatile("hltloop: hlt; jmp hltloop");
 

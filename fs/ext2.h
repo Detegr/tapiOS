@@ -116,6 +116,7 @@ typedef struct
 	int8_t name;
 } ext2_directory;
 
-fs_node* ext2_fs_init(uint8_t* fs_data);
+struct inode *ext2_fs_init(uint8_t *fs_data);
+struct inode *ext2_search(struct inode *node, const char *name);
 
 #endif

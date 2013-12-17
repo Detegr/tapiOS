@@ -1,20 +1,29 @@
 #include "vfs.h"
-#include "util.h"
+#include "../util.h"
 
-uint32_t fs_read(fs_node* node, uint32_t size, uint8_t* from)
+static struct inode *walk_path(struct inode *node, const char* name)
 {
-	if(node->actions.fs_read)
+	struct inode *wnode=node;
+	char tokname[256];
+	memcpy(tokname, name, 256);
+	char* path=strtok(tokname, '/');
+	if(path)
 	{
-		return node->actions.fs_read(node, size, from);
+		do
+		{
+			if(!wnode) return NULL;
+			wnode=node->actions->search(wnode, path);
+		} while((path=strtok(NULL, '/')));
+		return wnode;
 	}
-	return 0;
+	return NULL;
 }
 
-struct dirent* fs_readdir(fs_node* node)
+struct inode *vfs_search(struct inode *node, const char *name)
 {
-	if(node->actions.fs_readdir)
+	if(node->actions->search)
 	{
-		return node->actions.fs_readdir(node);
+		return walk_path(node, name);
 	}
 	return NULL;
 }

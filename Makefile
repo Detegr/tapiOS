@@ -1,5 +1,5 @@
 OBJECTS=loader.o paging_asm.o util_asm.o vga.o irq_asm.o irq.o util.o pmm.o vmm.o kernel.o heap.o scancodes.o process.o timer.o syscalls.o fs/vfs.o fs/ext2.o
-CFLAGS=-Wall -Wextra -Werror -nostdlib -Wno-unused-parameter -m32 -ffreestanding -g3 -std=c99 -Wno-unused-variable -masm=intel -Wno-unused-function
+CFLAGS=-Wall -Wextra -Werror -nostdlib -Wno-unused-parameter -m32 -ffreestanding -g3 -std=c99 -Wno-unused-variable -masm=intel -Wno-unused-function -Wno-unused-but-set-parameter
 ASM_FLAGS=-f elf -g
 LFLAGS=-melf_i386
 

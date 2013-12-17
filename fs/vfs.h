@@ -3,39 +3,40 @@
 
 #include <stdint.h>
 
-struct fs_node;
+struct inode_actions;
 
-typedef struct fs_actions
+struct inode
 {
-	uint32_t (*fs_read)(struct fs_node* node, uint32_t size, uint8_t* from);
-	uint32_t (*fs_write)(struct fs_node* node, uint32_t size, uint8_t* to);
-	void (*fs_open)(struct fs_node* node);
-	void (*fs_close)(struct fs_node* node);
-	struct dirent* (*fs_readdir)(struct fs_node* node);
-	//struct fs_node* (*fs_opendir)(struct fs_node* node, const char* name);
-} fs_actions;
-
-typedef struct fs_node
-{
-	char name[256];
-	uint32_t inode;
+	uint32_t inode_no;
 	uint32_t flags;
-	uint32_t length;
-	struct fs_node* link;
-	void* superblock;
-	fs_actions actions;
-} fs_node;
+	uint32_t size;
+	char name[256];
+	void *superblock;
+	struct inode_actions *actions;
+};
+
+struct file_actions
+{
+	uint32_t (*read)(struct inode *node, uint32_t size, uint8_t *from);
+	uint32_t (*write)(struct inode *node, uint32_t size, uint8_t *to);
+	uint32_t (*open)(struct inode *node);
+	uint32_t (*close)(struct inode *node);
+	uint32_t (*readdir)(struct inode *node, void* to);
+};
+
+struct inode_actions
+{
+	struct inode *(*search)(struct inode *node, const char* name);
+};
 
 struct dirent
 {
 	uint32_t inode;
 	char name[256];
 };
-
 struct dirent dirent;
-static fs_node root_fs;
 
-uint32_t fs_read(fs_node* node, uint32_t size, uint8_t* from);
-struct dirent* fs_readdir(fs_node* node);
+static struct inode root_fs;
+struct inode *vfs_search(struct inode *node, const char* name);
 
 #endif
