@@ -68,3 +68,11 @@ int32_t vfs_read(struct file *file, void *to, uint32_t count)
 	}
 	return -1;
 }
+
+struct dirent *vfs_readdir(DIR *dirp)
+{
+	struct file *filep=current_process->fds[dirp->dir_fd];
+	struct inode *inode=filep->inode;
+	if(!inode || !inode->i_act || !inode->i_act->readdir) return NULL;
+	return inode->i_act->readdir(inode);
+}

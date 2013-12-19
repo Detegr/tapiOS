@@ -97,9 +97,9 @@ static struct dirent* ext2_readdir(struct inode *node)
 	{
 		if(dir && ((uint32_t)dir-(uint32_t)bdir < 1024))
 		{
-			dirent.inode=dir->inode;
-			memcpy(&dirent.name, &dir->name, dir->name_length_low);
-			dirent.name[dir->name_length_low]=0;
+			dirent.d_ino=dir->inode;
+			memcpy(&dirent.d_name, &dir->name, dir->name_length_low);
+			dirent.d_name[dir->name_length_low]=0;
 			dir=advance(dir);
 			return &dirent;
 		}
@@ -118,9 +118,9 @@ static struct dirent* ext2_readdir(struct inode *node)
 		bdir=dir=get_block(node->superblock, inode->blocks[0]);
 		if(dir && ((uint32_t)bdir-(uint32_t)dir < 1024))
 		{
-			dirent.inode=dir->inode;
-			memcpy(&dirent.name, &dir->name, dir->name_length_low);
-			dirent.name[dir->name_length_low]=0;
+			dirent.d_ino=dir->inode;
+			memcpy(&dirent.d_name, &dir->name, dir->name_length_low);
+			dirent.d_name[dir->name_length_low]=0;
 			dir=advance(dir);
 			return &dirent;
 		}
@@ -256,6 +256,7 @@ struct inode *ext2_fs_init(uint8_t *fs_data)
 	ret->i_act=kmalloc(sizeof(struct inode_actions));
 	ret->f_act=kmalloc(sizeof(struct file_actions));
 	ret->i_act->search=&ext2_search;
+	ret->i_act->readdir=&ext2_readdir;
 	ret->f_act->open=&ext2_open;
 	ret->f_act->read=&ext2_read;
 	print_startup_info("ext2", true);

@@ -4,9 +4,6 @@
 #include <sys/stat.h>
 #include <dirent.h>
 
-extern unsigned char __bss_start;
-extern unsigned char __bss_end;
-
 int main()
 {
 	printf("Hello tapiOS!\n");
@@ -25,5 +22,10 @@ int main()
 	}
 	*/
 	DIR* d=opendir("/dir");
+	struct dirent *dep;
+	while((dep=readdir(d)))
+	{
+		printf("%s\n", dep->d_name);
+	}
 	return 0;
 }

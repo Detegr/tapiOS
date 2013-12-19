@@ -30,10 +30,16 @@ struct file_actions
 	int32_t (*close)(struct file *file);
 };
 
+typedef struct DIR
+{
+	uint32_t dir_fd;
+} DIR;
+
+// This is also defined in newlib. Is this bad?
 struct dirent
 {
-	uint32_t inode;
-	char name[256];
+	int d_ino;
+	char d_name[256];
 };
 struct dirent dirent;
 
@@ -54,5 +60,6 @@ volatile struct inode *root_fs;
 struct inode *vfs_search(struct inode *node, const char* name);
 int32_t vfs_open(struct inode *node, struct file *file);
 int32_t vfs_read(struct file *file, void *to, uint32_t count);
+struct dirent *vfs_readdir(DIR *dirp);
 
 #endif

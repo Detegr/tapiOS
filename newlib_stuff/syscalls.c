@@ -14,6 +14,7 @@
 #define SBRK 4
 #define OPEN 5
 #define OPENDIR 6
+#define READDIR 7
 
 #define SYSCALL0(n) \
 	__asm__ volatile("int $0x80;" :: "a"(n));
@@ -38,12 +39,6 @@ typedef struct DIR
 {
 	int dir_fd;
 } DIR;
-
-struct dirent
-{
-	int inode;
-	char name[256];
-};
 
 /* pointer to array of char * strings that define the current environment variables */
 char **environ;
@@ -92,4 +87,13 @@ int write(int file, char *ptr, int len)
 DIR *opendir(const char* name)
 {
 	SYSCALL1(OPENDIR, name);
+}
+
+struct dirent *readdir(DIR *dirp)
+{
+	static struct dirent de;
+	int ret;
+	__asm__ volatile("int $0x80;" : "=a"(ret) : "0"(READDIR), "b"(dirp), "c"(&de));
+	if(ret==0) return &de;
+	else return NULL;
 }

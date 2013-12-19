@@ -12,9 +12,14 @@ int _write(int fd, uint8_t* to, uint32_t size);
 int _read(int fd, uint8_t* from, uint32_t size);
 void* _sbrk(int32_t increment);
 int _open(const char* path, int flags);
+struct DIR *_opendir(const char *dirpath);
+int _readdir(DIR *dirp, struct dirent *ret);
 
 typedef int(*syscall_ptr)();
-syscall_ptr syscalls[]={&_exit, &_write, &_read, (syscall_ptr)&_sbrk, &_open};
+syscall_ptr syscalls[]={
+	&_exit, &_write, &_read, (syscall_ptr)&_sbrk,
+	&_open, (syscall_ptr)&_opendir, &_readdir
+};
 
 int _exit(int code)
 {
@@ -179,6 +184,43 @@ int _open(const char* path, int flags)
 		return newfd(f);
 	}
 	else return -1;
+}
+
+struct DIR *_opendir(const char *dirpath)
+{
+	if(!root_fs) PANIC();
+	struct inode *inode=vfs_search((struct inode*)root_fs, dirpath);
+	if(inode)
+	{
+		if(!(inode->flags & 0x4000)) // TODO: Maybe not use ext2 stuff for flags?
+		{
+			//errno=ENODIR;
+			return NULL;
+		}
+		else
+		{
+			struct file *f=kmalloc(sizeof(struct file)); // TODO: Free
+			if(vfs_open(inode, f) < 0) return NULL;
+			DIR *ret=kmalloc(sizeof(struct DIR));
+			ret->dir_fd=newfd(f);
+			return ret;
+		}
+	}
+	else return NULL;
+}
+
+int _readdir(DIR *dirp, struct dirent *ret)
+{
+	struct dirent *de=vfs_readdir(dirp);
+	if(de)
+	{
+		memcpy(ret, de, sizeof(struct dirent));
+		return 0;
+	}
+	else
+	{
+		return -1;
+	}
 }
 
 void syscall(void)
