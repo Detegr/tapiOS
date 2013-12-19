@@ -9,7 +9,6 @@ iso:
 	grub-mkrescue -o tapios.iso tapios
 
 kernel: $(OBJECTS)
-	nasm -f elf crt0.s
 	ld -T link.ld $(OBJECTS) -o tapios/boot/kernel.bin $(LFLAGS)
 	grub-mkrescue -o tapios.iso tapios
 

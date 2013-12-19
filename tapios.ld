@@ -1,6 +1,4 @@
 ENTRY (_start)
-INPUT (crt0.o)
-GROUP(-lnosys -lc -lnosys)
 
 SECTIONS {
 	. = 0x74B10000;
