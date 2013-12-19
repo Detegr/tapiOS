@@ -62,6 +62,11 @@ typedef struct
 	uint8_t unused[14];
 } ext2_blockgroup_descriptor;
 
+#define FINAL_DIRECT_BLOCK    11
+#define SINGLY_INDIRECT_BLOCK 12
+#define DOUBLY_INDIRECT_BLOCK 13
+#define TRIPLY_INDIRECT_BLOCK 14
+
 typedef struct
 {
 	uint16_t type_and_permissions;
@@ -76,21 +81,7 @@ typedef struct
 	uint32_t disk_sector_count;
 	uint32_t flags;
 	uint32_t os_value;
-	uint32_t block0;
-	uint32_t block1;
-	uint32_t block2;
-	uint32_t block3;
-	uint32_t block4;
-	uint32_t block5;
-	uint32_t block6;
-	uint32_t block7;
-	uint32_t block8;
-	uint32_t block9;
-	uint32_t block10;
-	uint32_t block11;
-	uint32_t singly_indirect_block;
-	uint32_t doubly_indirect_block;
-	uint32_t triply_indirect_block;
+	uint32_t blocks[15];
 	uint32_t generation_number;
 	uint32_t file_acl;
 	union {

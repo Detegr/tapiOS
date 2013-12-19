@@ -115,7 +115,7 @@ static struct dirent* ext2_readdir(struct inode *node)
 			return NULL;
 		}
 		// TODO: Other data blocks
-		bdir=dir=get_block(node->superblock, inode->block0);
+		bdir=dir=get_block(node->superblock, inode->blocks[0]);
 		if(dir && ((uint32_t)bdir-(uint32_t)dir < 1024))
 		{
 			dirent.inode=dir->inode;
@@ -144,7 +144,7 @@ struct inode *ext2_search(struct inode *node, const char *name)
 	if(!(inode->type_and_permissions & 0x4000)) return NULL; // Searching non-directories makes no sense
 	// TODO: Other data blocks
 	ext2_directory *bdir;
-	ext2_directory *dir=bdir=get_block(node->superblock, inode->block0);
+	ext2_directory *dir=bdir=get_block(node->superblock, inode->blocks[0]);
 	while(inside_dir(dir, bdir))
 	{
 		if(strlen(name) == dir->name_length_low)
@@ -158,13 +158,82 @@ struct inode *ext2_search(struct inode *node, const char *name)
 				ret->flags=retinode->type_and_permissions;
 				ret->size=retinode->size_low;
 				ret->superblock=node->superblock;
-				ret->actions=node->actions;
+				ret->i_act=node->i_act;
+				ret->f_act=node->f_act;
 				return ret;
 			}
 		}
 		dir=advance(dir);
 	}
 	return NULL;
+}
+
+int32_t ext2_open(struct file *f)
+{
+	ext2_inode *inode=read_inode(f->inode->superblock, f->inode->inode_no);
+	if(inode) return 0;
+	else return -1;
+}
+
+static int read_block(ext2_superblock *sb, struct file *f, uint8_t *block, uint8_t *to, uint32_t count)
+{
+	uint32_t ret=0;
+	for(uint32_t i=0; i<1024; ++i, ++ret)
+	{
+		if(f->pos == count) break;
+		else if(f->pos >= f->inode->size)
+		{
+			ret=0;
+			break;
+		}
+		to[f->pos++]=block[i];
+	}
+	return ret;
+}
+
+static int read_indirect_block(ext2_superblock *sb, struct file *f, uint32_t *blocks, uint8_t *to, uint32_t count)
+{
+	uint32_t ret=0;
+	for(int i=0; i<256; ++i)
+	{
+		if(blocks[i])
+		{
+			int read=read_block(sb, f, get_block(sb, blocks[i]), to, count);
+			if(read>0) ret+=read;
+			else ret=0;
+		}
+	}
+	return ret;
+}
+
+static int read_blocks(ext2_superblock *sb, struct file *f, uint8_t *to, uint32_t *blocks, uint32_t count)
+{
+	int32_t ret=0;
+	for(int b=0; b<=FINAL_DIRECT_BLOCK; ++b)
+	{
+		if(!blocks[b]) break;
+		uint8_t* p=get_block(sb, blocks[b]);
+		read_block(sb, f, get_block(sb, blocks[b]), to, count);
+	}
+	if(blocks[SINGLY_INDIRECT_BLOCK])
+	{
+		read_indirect_block(sb, f, (uint32_t*)get_block(sb, blocks[SINGLY_INDIRECT_BLOCK]), &to[ret], count);
+	}
+	if(blocks[DOUBLY_INDIRECT_BLOCK]) PANIC(); // TODO
+	if(blocks[TRIPLY_INDIRECT_BLOCK]) PANIC(); // TODO
+	if(f->pos >= f->inode->size) return 0;
+	else return f->pos;
+}
+
+int32_t ext2_read(struct file *f, void *to, uint32_t count)
+{
+	ext2_inode *inode=read_inode(f->inode->superblock, f->inode->inode_no);
+	if((inode->type_and_permissions & 0x4000))
+	{
+		//errno=EISDIR;
+		return -1;
+	}
+	return read_blocks(f->inode->superblock, f, to, inode->blocks, count);
 }
 
 struct inode *ext2_fs_init(uint8_t *fs_data)
@@ -178,14 +247,17 @@ struct inode *ext2_fs_init(uint8_t *fs_data)
 	struct inode *ret=kmalloc(sizeof(struct inode));
 	//int blockgroup_count=((sb->blocks+(sb->blocks_in_blockgroup-1))/sb->blocks_in_blockgroup);
 	ext2_inode* inode=read_inode(sb, 2); // inode 2 is always the root node
-	ext2_directory* d=get_block(sb, inode->block0);
+	ext2_directory* d=get_block(sb, inode->blocks[0]);
 	memcpy(ret->name, &d->name, d->name_length_low);
 	ret->inode_no=2;
 	ret->flags=inode->type_and_permissions;
 	ret->size=inode->size_low;
 	ret->superblock=sb;
-	ret->actions=kmalloc(sizeof(struct inode_actions));
-	ret->actions->search=&ext2_search;
+	ret->i_act=kmalloc(sizeof(struct inode_actions));
+	ret->f_act=kmalloc(sizeof(struct file_actions));
+	ret->i_act->search=&ext2_search;
+	ret->f_act->open=&ext2_open;
+	ret->f_act->read=&ext2_read;
 	print_startup_info("ext2", true);
 	return ret;
 }

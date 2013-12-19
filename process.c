@@ -142,3 +142,17 @@ process* find_active_process(void)
 	}
 	return p;
 }
+
+int newfd(struct file *f)
+{
+	// 0, 1, 2 always reserved for now
+	for(int i=3; i<FD_MAX; ++i)
+	{
+		if(current_process->fds[i] == NULL)
+		{
+			current_process->fds[i]=f;
+			return i;
+		}
+	}
+	return -1;
+}

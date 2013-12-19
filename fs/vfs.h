@@ -12,21 +12,22 @@ struct inode
 	uint32_t size;
 	char name[256];
 	void *superblock;
-	struct inode_actions *actions;
+	struct inode_actions *i_act;
+	struct file_actions *f_act;
+};
+
+struct file
+{
+	struct inode *inode;
+	uint32_t pos;
 };
 
 struct file_actions
 {
-	uint32_t (*read)(struct inode *node, uint32_t size, uint8_t *from);
-	uint32_t (*write)(struct inode *node, uint32_t size, uint8_t *to);
-	uint32_t (*open)(struct inode *node);
-	uint32_t (*close)(struct inode *node);
-	uint32_t (*readdir)(struct inode *node, void* to);
-};
-
-struct inode_actions
-{
-	struct inode *(*search)(struct inode *node, const char* name);
+	int32_t (*read)(struct file *file, void *to, uint32_t count);
+	int32_t (*write)(struct file *file, void *from, uint32_t count);
+	int32_t (*open)(struct file *file);
+	int32_t (*close)(struct file *file);
 };
 
 struct dirent
@@ -36,7 +37,22 @@ struct dirent
 };
 struct dirent dirent;
 
-static struct inode root_fs;
+struct inode_actions
+{
+	struct inode *(*search)(struct inode *node, const char* name);
+	struct dirent *(*readdir)(struct inode *node);
+};
+
+struct open_files
+{
+	struct file *file;
+	struct open_files *next;
+};
+
+volatile struct inode *root_fs;
+
 struct inode *vfs_search(struct inode *node, const char* name);
+int32_t vfs_open(struct inode *node, struct file *file);
+int32_t vfs_read(struct file *file, void *to, uint32_t count);
 
 #endif

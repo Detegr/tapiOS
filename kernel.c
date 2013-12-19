@@ -93,7 +93,15 @@ void setup_usermode_process(uint8_t* elf)
 			kalloc_page_from(vaddr_to_physaddr((vaddr_t)elf + (page_offset_from_elf * 0x1000) + (j*0x1000)), programs[i].p_vaddr + (j*0x1000), false, true);
 		}
 	}
-	current_process->brk=programs[0].p_vaddr + programs[0].p_filesz;
+
+	/* It seems like newlib wants the initial brk to be page aligned
+	 * so we need to align the initial brk address to beginning of a new page after bss.
+	 * It is then of course also required to allocate a new page because sbrk syscall
+	 * expects to be operating in an already allocated page initially.
+	 */
+	current_process->brk=((programs[0].p_vaddr + programs[0].p_filesz) + 0x1000) & 0xFFFFF000;
+	kalloc_page(current_process->brk, false, true);
+
 	switch_to_usermode(header.entry);
 }
 
@@ -117,28 +125,24 @@ void kmain(struct multiboot* b, uint32_t magic)
 
 	b=(struct multiboot*)((uint8_t*)b+KERNEL_VMA);
 	uint32_t mods_addr=*(uint32_t*)(b->mods_addr + KERNEL_VMA) + KERNEL_VMA;
+	root_fs=ext2_fs_init((uint8_t*)mods_addr);
 
-	struct inode *root=ext2_fs_init((uint8_t*)mods_addr);
-	struct inode *node=vfs_search(root, "/dir/file.txt");
-	if(node) kprintf("%s\n", node->name);
+	kprintf("\n%@Welcome to tapiOS!%@\n\n", 0x05, 0x07, b->mods_count, 0x03);
 
-	kprintf("\n%@Welcome to tapiOS!%@\nMod count: %d\n\n", 0x05, 0x07, b->mods_count, 0x03);
-
-	/*
-	struct dirent* ent=NULL;
-	while((ent=fs_readdir(root)))
-	{
-		kprintf("%s\n", ent->name);
-	}
-	*/
-
-	/*
 	int pid=fork();
 	if(pid==0)
 	{
-		setup_usermode_process((uint8_t*)mods_addr);
+		uint8_t *init_mem=kmalloc(50000);
+		struct inode *node=vfs_search((struct inode*)root_fs, "/bin/init");
+		if(node)
+		{
+			struct file init;
+			vfs_open(node, &init);
+			int read=vfs_read(&init, init_mem, 50000);
+			kprintf("Init read, %d bytes\n", read);
+			setup_usermode_process(init_mem);
+		}
 	}
-	*/
 
 	__asm__ volatile("hltloop: hlt; jmp hltloop");
 

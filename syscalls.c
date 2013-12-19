@@ -3,14 +3,18 @@
 #include "vga.h"
 #include "irq.h"
 #include "scancodes.h"
+#include "process.h"
+#include "heap.h"
+#include "fs/vfs.h"
 
 int _exit(int code);
 int _write(int fd, uint8_t* to, uint32_t size);
 int _read(int fd, uint8_t* from, uint32_t size);
 void* _sbrk(int32_t increment);
+int _open(const char* path, int flags);
 
 typedef int(*syscall_ptr)();
-syscall_ptr syscalls[]={&_exit, &_write, &_read, (syscall_ptr)&_sbrk};
+syscall_ptr syscalls[]={&_exit, &_write, &_read, (syscall_ptr)&_sbrk, &_open};
 
 int _exit(int code)
 {
@@ -35,6 +39,12 @@ int _exit(int code)
 
 int _read(int fd, uint8_t* to, uint32_t count)
 {
+	if(fd>2)
+	{
+		struct file *f=current_process->fds[fd];
+		if(!f) PANIC();
+		return vfs_read(f, to, count);
+	}
 	if(count==0) return 0;
 	process* p=find_active_process();
 	if(!p) PANIC();
@@ -128,6 +138,8 @@ int _write(int fd, uint8_t* to, uint32_t size)
 
 void* _sbrk(int32_t increment)
 {
+	if(increment==0) return (void*)current_process->brk;
+
 	uint32_t newbrk=current_process->brk+increment;
 	int diff=newbrk-current_process->brk;
 	if(diff == 0) return (void*)current_process->brk;
@@ -152,6 +164,21 @@ void* _sbrk(int32_t increment)
 	uint32_t oldbrk=current_process->brk;
 	current_process->brk=newbrk;
 	return (void*)oldbrk;
+}
+
+int _open(const char* path, int flags)
+{
+	// flags ignored for now, expecting O_RDONLY
+	// also expecting a full path
+	if(!root_fs) PANIC();
+	struct inode *inode=vfs_search((struct inode*)root_fs, path);
+	if(inode)
+	{
+		struct file *f=kmalloc(sizeof(struct file)); // TODO: Free
+		if(vfs_open(inode, f) < 0) return -1;
+		return newfd(f);
+	}
+	else return -1;
 }
 
 void syscall(void)

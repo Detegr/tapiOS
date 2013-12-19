@@ -1,5 +1,7 @@
 #include "vfs.h"
+#include "../heap.h"
 #include "../util.h"
+#include "../process.h"
 
 static struct inode *walk_path(struct inode *node, const char* name)
 {
@@ -12,7 +14,7 @@ static struct inode *walk_path(struct inode *node, const char* name)
 		do
 		{
 			if(!wnode) return NULL;
-			wnode=node->actions->search(wnode, path);
+			wnode=node->i_act->search(wnode, path);
 		} while((path=strtok(NULL, '/')));
 		return wnode;
 	}
@@ -21,9 +23,48 @@ static struct inode *walk_path(struct inode *node, const char* name)
 
 struct inode *vfs_search(struct inode *node, const char *name)
 {
-	if(node->actions->search)
+	if(node->i_act->search)
 	{
 		return walk_path(node, name);
 	}
 	return NULL;
+}
+
+int32_t vfs_open(struct inode *node, struct file *ret)
+{
+	int32_t retval=0;
+	ret->inode=node;
+	ret->pos=0;
+	if(node->f_act->open)
+	{
+		retval=node->f_act->open(ret);
+		if(retval==-1) return -1;
+	}
+	else return -1;
+	struct open_files *of=current_process->files_open;
+	if(!current_process->files_open)
+	{
+		of=current_process->files_open=kmalloc(sizeof(struct open_files));
+		of->file=ret;
+		of->next=NULL;
+	}
+	else
+	{
+		struct open_files *of=current_process->files_open;
+		while(of->next) of=of->next;
+		of->next=kmalloc(sizeof(struct open_files));
+		of=of->next;
+		of->file=ret;
+		of->next=NULL;
+	}
+	return retval;
+}
+
+int32_t vfs_read(struct file *file, void *to, uint32_t count)
+{
+	if(file->inode->f_act->read)
+	{
+		return file->inode->f_act->read(file, to, count);
+	}
+	return -1;
 }

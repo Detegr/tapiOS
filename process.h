@@ -5,8 +5,10 @@
 #include "pmm.h"
 #include "vmm.h"
 #include "util.h"
+#include "fs/vfs.h"
 
 #define KERNEL_STACK_SIZE 2048
+#define FD_MAX 256
 
 typedef struct process
 {
@@ -23,6 +25,9 @@ typedef struct process
 	uint8_t keyp;
 	char keybuf[256];
 	char stdoutbuf[256]; // Just a hack before any better implementation
+
+	struct open_files *files_open;
+	struct file *fds[FD_MAX];
 } process;
 
 #ifndef SHARED_PROCESS_VARIABLES
@@ -35,6 +40,7 @@ void setup_multitasking(void);
 process* find_active_process(void);
 int fork(void);
 int getpid(void);
+int newfd(struct file *f);
 void switch_to_usermode(vaddr_t entrypoint);
 
 #endif

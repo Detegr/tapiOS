@@ -1,15 +1,29 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <dirent.h>
+
+extern unsigned char __bss_start;
+extern unsigned char __bss_end;
 
 int main()
 {
-	char str[32];
-	char str2[32];
-	char str3[32];
-	printf("Hello\n");
-	scanf("%s %s %s", str, str2, str3);
-	printf("First: %s\nSecond: %s\nThird: %s\n", str, str2, str3);
+	printf("Hello tapiOS!\n");
+	/*
+	int fd=open("/dir/file.txt", 0, 0);
+	if(fd>0)
+	{
+		char buf[1024];
+		int r=read(fd, buf, 1024);
+		printf("Read: %d\n", r);
+		printf("%s", buf);
+	}
+	else
+	{
+		printf("Failed to open file.\n");
+	}
+	*/
+	DIR* d=opendir("/dir");
 	return 0;
 }
