@@ -5,6 +5,8 @@
 
 static struct inode *walk_path(struct inode *node, const char* name)
 {
+	if(strlen(name) == 1 && name[0] == '/') return (struct inode*)root_fs;
+
 	struct inode *wnode=node;
 	char tokname[256];
 	memcpy(tokname, name, 256);

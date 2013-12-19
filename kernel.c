@@ -132,14 +132,14 @@ void kmain(struct multiboot* b, uint32_t magic)
 	int pid=fork();
 	if(pid==0)
 	{
-		uint8_t *init_mem=kmalloc(50000);
 		struct inode *node=vfs_search((struct inode*)root_fs, "/bin/init");
 		if(node)
 		{
 			struct file init;
 			vfs_open(node, &init);
-			int read=vfs_read(&init, init_mem, 50000);
-			kprintf("Init read, %d bytes\n", read);
+			uint8_t *init_mem=kmalloc(node->size);
+			int read=vfs_read(&init, init_mem, node->size);
+			//kprintf("Init read, %d bytes\n", read);
 			setup_usermode_process(init_mem);
 		}
 	}
