@@ -88,10 +88,10 @@ static ext2_inode* read_inode(ext2_superblock* b, int inode_index)
 
 static struct dirent* ext2_readdir(struct inode *node)
 {
-	static ext2_inode *inode=NULL;
 	static ext2_directory *bdir=NULL;
 	static ext2_directory *dir=NULL;
 	static struct inode *prevnode=NULL;
+	ext2_inode *inode=NULL;
 
 	if(prevnode==node)
 	{
@@ -103,7 +103,12 @@ static struct dirent* ext2_readdir(struct inode *node)
 			dir=advance(dir);
 			return &dirent;
 		}
-		else return NULL;
+		else
+		{
+			prevnode=NULL;
+			dir=bdir=NULL;
+			return NULL;
+		}
 	}
 	else
 	{
