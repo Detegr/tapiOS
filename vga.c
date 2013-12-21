@@ -164,14 +164,14 @@ void kprintf(const char* fmt, ...)
 	va_end(argp);
 }
 
-void delete_last_char(int minrow)
+void delete_last_char(int minrow, int mincol)
 {
 	if(row==0 && col==0) return;
 	if(col==0 && row>minrow) {row--;col=158;}
-	else if(col>0) col-=2;
+	else if(col>0 && col>mincol) col-=2;
 	kprintf("%c", ' ');
 	if(col==0 && row>minrow) {row--;col=158;}
-	else if(col>0) col-=2;
+	else if(col>0 && col>mincol) col-=2;
 }
 
 void update_cursor(void)
@@ -182,4 +182,9 @@ void update_cursor(void)
 int get_cursor_row(void)
 {
 	return row;
+}
+
+int get_cursor_col(void)
+{
+	return col;
 }

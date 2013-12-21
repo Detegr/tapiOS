@@ -14,7 +14,8 @@ void hide_cursor(void);
 void set_cursor(uint8_t row, uint8_t col);
 void update_cursor(void);
 void reset_cursor(void);
-void delete_last_char(int);
+void delete_last_char(int,int);
 int get_cursor_row(void);
+int get_cursor_col(void);
 
 #endif

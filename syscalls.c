@@ -81,6 +81,7 @@ int _read(int fd, uint8_t* to, uint32_t count)
 	}
 	int prevkp=p->keyp;
 	int row=get_cursor_row();
+	int col=get_cursor_col();
 	update_cursor();
 	while(true)
 	{
@@ -91,7 +92,7 @@ int _read(int fd, uint8_t* to, uint32_t count)
 		{
 			char c=char_for_scancode(p->keybuf[i]);
 			if(c==CHAR_UP || c==CHAR_UNHANDLED) continue;
-			else if(c==CHAR_BACKSPACE) delete_last_char(row);
+			else if(c==CHAR_BACKSPACE) delete_last_char(row, col);
 			else kprintc(c);
 			update_cursor();
 			if(c=='\n') goto done;
@@ -206,7 +207,11 @@ struct DIR *_opendir(const char *dirpath)
 			return ret;
 		}
 	}
-	else return NULL;
+	else
+	{
+		//errno=ENOENT;
+		return NULL;
+	}
 }
 
 int _readdir(DIR *dirp, struct dirent *ret)
