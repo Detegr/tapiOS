@@ -1,9 +1,9 @@
 #include "ext2.h"
-#include "../vga.h"
-#include "../util.h"
-#include "../pmm.h"
-#include "../vmm.h"
-#include "../heap.h"
+#include <terminal/vga.h>
+#include <util/util.h>
+#include <mem/pmm.h>
+#include <mem/vmm.h>
+#include <mem/heap.h>
 #include <stdbool.h>
 
 #define SUPERBLOCK_SIZE 1024

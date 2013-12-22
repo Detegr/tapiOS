@@ -1,16 +1,16 @@
-#include "util.h"
-#include "vga.h"
-#include "irq.h"
-#include "pmm.h"
-#include "vmm.h"
-#include "heap.h"
-#include "process.h"
-#include "timer.h"
-#include "tss.h"
-#include "syscalls.h"
-#include "elf.h"
-#include "fs/vfs.h"
-#include "fs/ext2.h"
+#include <util/util.h>
+#include <terminal/vga.h>
+#include <irq/irq.h>
+#include <irq/timer.h>
+#include <mem/pmm.h>
+#include <mem/vmm.h>
+#include <mem/heap.h>
+#include <task/elf.h>
+#include <task/process.h>
+#include <task/tss.h>
+#include <syscall/syscalls.h>
+#include <fs/vfs.h>
+#include <fs/ext2.h>
 
 #define KERNEL_VMA 0xC0000000
 

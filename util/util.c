@@ -1,5 +1,5 @@
 #include "util.h"
-#include "vga.h"
+#include <terminal/vga.h>
 
 extern void _outb(uint16_t dest, uint8_t src);
 extern void _outw(uint16_t dest, uint16_t src);

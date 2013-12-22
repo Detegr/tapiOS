@@ -1,5 +1,5 @@
 #include "vga.h"
-#include "util.h"
+#include <util/util.h>
 #include <stdarg.h>
 
 volatile uint8_t* video = (uint8_t*)0xC00B8000;

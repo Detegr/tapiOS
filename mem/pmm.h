@@ -2,7 +2,7 @@
 #define _TAPIOS_PMM_H_
 
 #include <stdint.h>
-#include "util.h"
+#include <util/util.h>
 
 #define BITMAP_SIZE 32768
 typedef unsigned long physaddr_t;

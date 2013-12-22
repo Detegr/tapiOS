@@ -1,6 +1,5 @@
 #include "pmm.h"
-#include "util.h"
-#include "vga.h"
+#include <terminal/vga.h>
 
 extern uint32_t kernel_end_addr;
 extern uint32_t __kernel_end;

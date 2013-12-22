@@ -1,7 +1,7 @@
 #include "pmm.h"
 #include "vmm.h"
-#include "vga.h"
 #include "heap.h"
+#include <terminal/vga.h>
 
 #define PRESENT 0x1
 #define READWRITE 0x2
