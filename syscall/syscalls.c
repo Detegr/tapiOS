@@ -14,11 +14,13 @@ void* _sbrk(int32_t increment);
 int _open(const char* path, int flags);
 struct DIR *_opendir(const char *dirpath);
 int _readdir(DIR *dirp, struct dirent *ret);
+int _fork(void);
 
 typedef int(*syscall_ptr)();
 syscall_ptr syscalls[]={
 	&_exit, &_write, &_read, (syscall_ptr)&_sbrk,
-	&_open, (syscall_ptr)&_opendir, &_readdir
+	&_open, (syscall_ptr)&_opendir, &_readdir,
+	&_fork
 };
 
 int _exit(int code)
@@ -226,6 +228,11 @@ int _readdir(DIR *dirp, struct dirent *ret)
 	{
 		return -1;
 	}
+}
+
+int _fork(void)
+{
+	return fork();
 }
 
 void syscall(void)
