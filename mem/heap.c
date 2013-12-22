@@ -1,7 +1,6 @@
 #include "heap.h"
 #include "pmm.h"
 #include "vmm.h"
-#include "vga.h"
 
 extern uint32_t kernel_end_addr;
 static uint32_t kheap_end=0;

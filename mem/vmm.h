@@ -1,6 +1,10 @@
 #ifndef _TAPIOS_VMM_H_
 #define _TAPIOS_VMM_H_
 
+#include <stdint.h>
+#include <stdbool.h>
+#include "pmm.h"
+
 typedef unsigned char vptr_t;
 typedef unsigned long vaddr_t;
 

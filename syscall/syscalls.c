@@ -1,11 +1,11 @@
 #include "syscalls.h"
-#include "process.h"
-#include "vga.h"
-#include "irq.h"
-#include "scancodes.h"
-#include "process.h"
-#include "heap.h"
-#include "fs/vfs.h"
+#include <task/process.h>
+#include <terminal/vga.h>
+#include <irq/irq.h>
+#include <util/scancodes.h>
+#include <task/process.h>
+#include <mem/heap.h>
+#include <fs/vfs.h>
 
 int _exit(int code);
 int _write(int fd, uint8_t* to, uint32_t size);

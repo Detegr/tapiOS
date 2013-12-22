@@ -1,8 +1,8 @@
 #include "irq.h"
-#include "scancodes.h"
-#include "util.h"
-#include "process.h"
-#include "syscalls.h"
+#include <util/scancodes.h>
+#include <util/util.h>
+#include <task/process.h>
+#include <syscall/syscalls.h>
 #include <stdint.h>
 
 extern void _timer_handler(void);

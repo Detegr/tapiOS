@@ -1,5 +1,5 @@
 #include "timer.h"
-#include "util.h"
+#include <util/util.h>
 
 #define PIT_COMMAND_PORT 0x43
 #define PIT_DATA_PORT 0x40

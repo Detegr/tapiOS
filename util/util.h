@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "tss.h"
+#include <task/tss.h>
 
 #define NULL (void*)0x0
 #define PANIC() panic(__FILE__,__LINE__)

@@ -2,10 +2,10 @@
 #define _TAPIOS_PROCESS_H_
 
 #include <stdint.h>
-#include "pmm.h"
-#include "vmm.h"
-#include "util.h"
-#include "fs/vfs.h"
+#include <mem/pmm.h>
+#include <mem/vmm.h>
+#include <util/util.h>
+#include <fs/vfs.h>
 
 #define KERNEL_STACK_SIZE 2048
 #define FD_MAX 256

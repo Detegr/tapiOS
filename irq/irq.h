@@ -1,8 +1,8 @@
 #ifndef _TAPIOS_IRQ_H_
 #define _TAPIOS_IRQ_H_
 
-#include "util.h"
-#include "vga.h"
+#include <util/util.h>
+#include <terminal/vga.h>
 
 void irq1_handler(void);
 

@@ -1,7 +1,7 @@
 #include "vfs.h"
-#include "../heap.h"
-#include "../util.h"
-#include "../process.h"
+#include <mem/heap.h>
+#include <util/util.h>
+#include <task/process.h>
 
 static struct inode *walk_path(struct inode *node, const char* name)
 {
