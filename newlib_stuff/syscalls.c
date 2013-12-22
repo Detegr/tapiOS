@@ -15,6 +15,7 @@
 #define OPEN 5
 #define OPENDIR 6
 #define READDIR 7
+#define FORK 8
 
 #define SYSCALL0(n) \
 	__asm__ volatile("int $0x80;" :: "a"(n));
@@ -96,4 +97,9 @@ struct dirent *readdir(DIR *dirp)
 	__asm__ volatile("int $0x80;" : "=a"(ret) : "0"(READDIR), "b"(dirp), "c"(&de));
 	if(ret==0) return &de;
 	else return NULL;
+}
+
+int fork(void)
+{
+	SYSCALL0(FORK);
 }
