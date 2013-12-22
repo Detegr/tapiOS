@@ -15,10 +15,6 @@ extern panic
 
 section .text
 
-_setidt:
-	lidt [idtptr]
-	ret
-
 _outb:
 	mov al, [esp+8]
 	mov dx, [esp+4]
