@@ -42,5 +42,6 @@ int fork(void);
 int getpid(void);
 int newfd(struct file *f);
 void switch_to_usermode(vaddr_t entrypoint);
+void setup_usermode_process(uint8_t* elf);
 
 #endif

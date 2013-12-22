@@ -1,7 +1,9 @@
 #include "process.h"
+#include "tss.h"
 #include <mem/heap.h>
 #include <util/util.h>
 #include <terminal/vga.h>
+#include "elf.h"
 
 static uint32_t nextpid=1;
 extern page_directory* kernel_pdir;
@@ -98,4 +100,37 @@ int newfd(struct file *f)
 		}
 	}
 	return -1;
+}
+
+void setup_usermode_process(uint8_t* elf)
+{
+	elf_header header=*(elf_header*)elf;
+
+	char elf_magic[]={0x7F,'E','L','F'};
+	if(memcmp(&header, elf_magic, sizeof(elf_magic)) != 0)
+	{
+		kprintf("Elf header magic doesn't match\n");
+		return;
+	}
+	elf_program_entry* programs=(elf_program_entry*)(elf+header.program_table);
+	elf_section_entry* sections=(elf_section_entry*)(elf+header.section_table);
+
+	for(int i=0; i<header.program_entries; ++i)
+	{
+		int page_offset_from_elf=programs[i].p_offset / 0x1000;
+		for(uint32_t j=0; j<=programs[i].p_filesz/0x1000; ++j)
+		{
+			kalloc_page_from(vaddr_to_physaddr((vaddr_t)elf + (page_offset_from_elf * 0x1000) + (j*0x1000)), programs[i].p_vaddr + (j*0x1000), false, true);
+		}
+	}
+
+	/* It seems like newlib wants the initial brk to be page aligned
+	 * so we need to align the initial brk address to beginning of a new page after bss.
+	 * It is then of course also required to allocate a new page because sbrk syscall
+	 * expects to be operating in an already allocated page initially.
+	 */
+	current_process->brk=((programs[0].p_vaddr + programs[0].p_filesz) + 0x1000) & 0xFFFFF000;
+	kalloc_page(current_process->brk, false, true);
+
+	switch_to_usermode(header.entry);
 }

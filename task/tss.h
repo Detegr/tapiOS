@@ -1,6 +1,8 @@
 #ifndef _TAPIOS_TSS_H_
 #define _TAPIOS_TSS_H_
 
+#include <stdint.h>
+
 typedef struct tss_entry
 {
    uint32_t prev_tss;
@@ -31,5 +33,7 @@ typedef struct tss_entry
    uint16_t trap;
    uint16_t iomap_base;
 } __attribute__((packed)) tss_entry;
+
+struct tss_entry tss;
 
 #endif
