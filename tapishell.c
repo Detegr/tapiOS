@@ -62,6 +62,18 @@ int main()
 				}
 			}
 		}
+		else if(command("fork", "fork ", buf))
+		{
+			int pid=fork();
+			if(pid==0)
+			{
+				for(int i=0; i<1000000; ++i)
+				{
+					if(i%100000 == 0) printf("I am the child\n");
+				}
+				__asm__ volatile("movl $0x1, %eax; int $0x80;");
+			}
+		}
 		else
 		{
 			printf("tapiShell :: Command not found: '%s'\n", buf);
