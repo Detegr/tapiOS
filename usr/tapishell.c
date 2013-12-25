@@ -67,12 +67,13 @@ int main()
 			int pid=fork();
 			if(pid==0)
 			{
-				for(int i=0; i<1000000; ++i)
+				for(int i=0; i<100000; ++i)
 				{
-					if(i%100000 == 0) printf("I am the child\n");
+					if(i%50000 == 0) printf("I am the child\n");
 				}
 				__asm__ volatile("movl $0x1, %eax; int $0x80;");
 			}
+			else printf("Forked child with pid: %d\n", pid);
 		}
 		else
 		{

@@ -13,6 +13,7 @@
 #include <syscall/syscalls.h>
 #include <fs/vfs.h>
 #include <fs/ext2.h>
+#include <task/multitasking.h>
 
 #define KERNEL_VMA 0xC0000000
 
@@ -62,8 +63,8 @@ void kmain(struct multiboot* b, uint32_t magic)
 	}
 	setup_bitmap();
 	setup_vmm();
+	setup_tasking();
 	set_timer_freq(100);
-	setup_multitasking();
 
 	b=(struct multiboot*)((uint8_t*)b+KERNEL_VMA);
 	uint32_t mods_addr=*(uint32_t*)(b->mods_addr + KERNEL_VMA) + KERNEL_VMA;
@@ -71,21 +72,18 @@ void kmain(struct multiboot* b, uint32_t magic)
 
 	kprintf("\n%@Welcome to tapiOS!%@\n\n", 0x05, 0x07, b->mods_count, 0x03);
 
-	int pid=fork();
-	if(pid==0)
+	struct inode *node=vfs_search((struct inode*)root_fs, "/bin/init");
+	if(node)
 	{
-		struct inode *node=vfs_search((struct inode*)root_fs, "/bin/init");
-		if(node)
-		{
-			struct file init;
-			vfs_open(node, &init);
-			uint8_t *init_mem=kmalloc(node->size);
-			int read=vfs_read(&init, init_mem, node->size);
-			//kprintf("Init read, %d bytes\n", read);
-			setup_usermode_process(init_mem);
-		}
-	}
+		struct file init;
 
+		vfs_open(node, &init);
+		uint8_t *init_mem=kmalloc(node->size);
+		int read=vfs_read(&init, init_mem, node->size);
+		vaddr_t entrypoint=init_elf_get_entry_point(init_mem);
+		setup_initial_process(entrypoint);
+	}
+	else kprintf("Init not found\n");
 	__asm__ volatile("hltloop: hlt; jmp hltloop");
 
 	PANIC();

@@ -2,12 +2,26 @@
 	global %1
 	extern %2
 	%1:
-	pushad
-	mov eax, [esp+32] ; Push possible error code
+	cli
+	pusha
+	push ds
+	push es
+	push fs
+	push gs
+	mov ax, 0x10
+	mov ds, ax
+	mov es, ax
+	mov fs, ax
+	mov gs, ax
+	mov eax, [esp+52] ; Push possible error code
 	push eax
 	call %2
 	pop eax ; Pop error code
 	call pic_get_irq
+	pop gs
+	pop fs
+	pop es
+	pop ds
 	jmp send_eoi
 %endmacro
 
@@ -29,10 +43,26 @@ IRQ_HANDLER _page_fault, page_fault
 global _syscall
 extern syscall
 _syscall:
-	pushad
+	cli
+	pusha
+	push ds
+	push es
+	push fs
+	push gs
+	push eax
+	mov ax, 0x10
+	mov ds, ax
+	mov es, ax
+	mov fs, ax
+	mov gs, ax
 	call syscall
-	mov [esp+28], eax ; Replace old eax with return value
-	popad
+	mov [esp+48], eax ; Replace old eax with return value
+	pop eax
+	pop gs
+	pop fs
+	pop es
+	pop ds
+	popa
 	iret
 
 send_eoi:
@@ -44,7 +74,7 @@ send_eoi:
 	cmp bl, 0x8
 	jge send_eoi_slave
 send_eoi_fin:
-	popad
+	popa
 	iret
 
 send_eoi_slave:

@@ -12,14 +12,16 @@
 
 typedef struct process
 {
+	void *esp;
+	void *stack;
+
 	uint32_t pid;
-	uint32_t esp;
-	uint32_t ebp;
-	uint32_t eip;
+
 	page_directory* pdir;
 	struct process* next;
 	vptr_t* esp0;
 	bool active;
+	bool ready;
 	vaddr_t brk;
 
 	uint8_t keyp;
@@ -36,12 +38,11 @@ volatile process* process_list;
 #define SHARED_PROCESS_VARIABLES
 #endif
 
-void setup_multitasking(void);
 process* find_active_process(void);
 int fork(void);
 int getpid(void);
 int newfd(struct file *f);
-void switch_to_usermode(vaddr_t entrypoint);
-void setup_usermode_process(uint8_t* elf);
+vaddr_t init_elf_get_entry_point(uint8_t* elf);
+vptr_t *setup_usermode_stack(vaddr_t entry_point, vptr_t *stack_top_ptr);
 
 #endif

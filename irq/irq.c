@@ -8,14 +8,18 @@
 
 void timer_handler(void)
 {
-	if(!current_process) return;
+/*
+	if(!current_process || !current_process->next) return;
+
+	process *new_process;
+	process *old_process;
 
 	uint32_t esp, ebp, eip;
 	__asm__ volatile("mov %0, esp;"
 					 "mov %1, ebp;" : "=r"(esp), "=r"(ebp));
 
 	eip=_get_eip();
-	if(eip==0xADDEDBEE)
+	if(eip==0xADDEDBEE || !process_list->next)
 	{
 		return; // Process switch occurred
 	}
@@ -24,8 +28,10 @@ void timer_handler(void)
 	current_process->eip=eip;
 	current_process->esp=esp;
 	current_process->ebp=ebp;
+
 	if(!current_process->next) current_process=process_list;
 	else current_process=current_process->next;
+	if(!current_process->ready) PANIC();
 
 	eip = current_process->eip;
 	esp = current_process->esp;
@@ -47,14 +53,16 @@ void timer_handler(void)
 					 "jmp .finish;"
 					 ".send_slave: out 0xA0, al;"
 					 ".finish:");
-	__asm__ volatile("mov ecx, %0;"
+	__asm__ volatile("cli;"
+					 "mov ecx, %0;"
 					 "mov esp, %1;"
 					 "mov ebp, %2;"
 					 "mov cr3, %3;"
 					 "mov eax, 0xADDEDBEE;"
 					 "sti;"
 					 "jmp ecx;"
-					 :: "r"(eip), "r"(esp), "r"(ebp), "r"(pageaddr) : "eax","ecx");
+					 :: "r"(eip), "r"(esp), "r"(ebp), "r"(pageaddr) : "eax","esp","ecx");
+*/
 }
 
 void irq1_handler(void)

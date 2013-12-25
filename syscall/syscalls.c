@@ -14,13 +14,12 @@ void* _sbrk(int32_t increment);
 int _open(const char* path, int flags);
 struct DIR *_opendir(const char *dirpath);
 int _readdir(DIR *dirp, struct dirent *ret);
-int _fork(void);
 
 typedef int(*syscall_ptr)();
 syscall_ptr syscalls[]={
 	&_exit, &_write, &_read, (syscall_ptr)&_sbrk,
 	&_open, (syscall_ptr)&_opendir, &_readdir,
-	&_fork
+	&fork
 };
 
 int _exit(int code)
@@ -230,15 +229,10 @@ int _readdir(DIR *dirp, struct dirent *ret)
 	}
 }
 
-int _fork(void)
-{
-	return fork();
-}
-
-void syscall(void)
+void syscall(int call)
 {
 	__asm__ volatile(
-		"mov eax, %0[eax * 4 - 4];"
+		"mov eax, [%0];"
 		"push edx;"
 		"push ecx;"
 		"push ebx;"
@@ -246,5 +240,5 @@ void syscall(void)
 		"pop ebx;"
 		"pop ebx;"
 		"pop ebx;"
-		:: "m"(syscalls));
+		:: "r"(&syscalls[call-1]));
 }

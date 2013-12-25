@@ -5,75 +5,66 @@
 #include <terminal/vga.h>
 #include "elf.h"
 
-static uint32_t nextpid=1;
+static uint32_t nextpid=2;
 extern page_directory* kernel_pdir;
+extern void _return_to_userspace(void);
+
+static void copy_open_resources(process *from, process *to)
+{
+	for(int i=0; i<FD_MAX; ++i)
+	{
+		to->fds[i]=from->fds[i];
+	}
+	if(from->files_open)
+	{
+		to->files_open=kmalloc(sizeof(struct open_files));
+		struct open_files *to_of=to->files_open;
+		struct open_files *of=from->files_open;
+		while((of=of->next))
+		{
+			to_of->next=kmalloc(sizeof(struct open_files));
+			memcpy(to_of->next, of, sizeof(struct open_files));
+			to_of=to_of->next;
+		}
+	}
+}
 
 int fork(void)
 {
+	/*
 	__asm__ volatile("cli;");
 
 	process* parent=(process*)current_process;
 	page_directory* pdir=clone_page_directory_from(current_process->pdir);
-	process* new=kmalloc(sizeof(process));
-	memset(new, 0, sizeof(process));
-	new->active=false;
-	new->pid=nextpid++;
-	new->pdir=pdir;
-	new->esp0=kmalloc(KERNEL_STACK_SIZE);
-	memset(new->esp0, 0, KERNEL_STACK_SIZE);
-	memset(new->stdoutbuf, 0, 256);
+	process* child=kmalloc(sizeof(process));
+	memset(child, 0, sizeof(process));
+	child->active=false;
+	child->ready=false;
+	child->pid=nextpid++;
+	child->pdir=pdir;
+	child->esp0=kmalloc(KERNEL_STACK_SIZE);
+	memcpy(child->esp0, parent->esp0, KERNEL_STACK_SIZE);
+	memset(child->stdoutbuf, 0, 256);
+
+	//copy_open_resources(parent, child);
 
 	process* p=(process*)process_list;
 	while(p->next) p=p->next;
-	p->next=new;
+	p->next=child;
 
-	uint32_t eip=_get_eip();
-	if(current_process == parent)
-	{
-		uint32_t ebp, esp;
-		__asm__ volatile("mov %0, ebp;"
-						 "mov %1, esp" : "=r"(ebp), "=r"(esp));
-		new->esp=esp;
-		new->ebp=ebp;
-		new->eip=eip;
-		__asm__ volatile("sti;");
-		return new->pid;
-	}
-	else
-	{
-		return 0;
-	}
+	child->eip=(uint32_t)_return_to_userspace;
+	child->ready=true;
+	__asm__ volatile("mov %0, ebp;"
+					 "mov %1, esp;"
+					 "sti;" : "=r"(child->ebp), "=r"(child->esp));
+	return child->pid;
+	*/
+	return -1;
 }
 
 int getpid(void)
 {
 	return current_process->pid;
-}
-
-void switch_to_usermode(vaddr_t entrypoint)
-{
-	tss.esp0=((vaddr_t)current_process->esp0)+KERNEL_STACK_SIZE;
-	current_process->active=true;
-	__asm__ volatile(
-		"cli;"
-		"mov ax, 0x23;" // 0x20 (user data segment) | 0x03 (privilege level 3)
-		"mov ds, ax;"
-		"mov es, ax;"
-		"mov fs, ax;"
-		"mov gs, ax;"
-		"mov eax, esp;"
-		"push 0x23;" // Push user data segment
-		"push eax;"
-		"pushfd;" // Push eflags
-		// Set interrupt flag enabled in eflags as we cannot use sti in user mode anymore
-		"pop eax;"
-		"or eax, 0x200;" // Set IF (interrupt flag)
-		"push eax;" // Push eflags back
-		"push 0x1B;" // 0x18 (user code segment) | 0x03 (privilege level 3)
-		"mov eax, %0;"
-		"push eax;"
-		"iret;" // Return. Interrupts will be enabled as we changed eflags manually.
-		:: "r"(entrypoint) : "eax");
 }
 
 process* find_active_process(void)
@@ -102,7 +93,30 @@ int newfd(struct file *f)
 	return -1;
 }
 
-void setup_usermode_process(uint8_t* elf)
+vptr_t *setup_usermode_stack(vaddr_t entry_point, vptr_t *stack_top_ptr)
+{
+#define PUSH(x) --stack_top; *stack_top=x;
+	uint32_t *stack_top=(uint32_t*)stack_top_ptr;
+	PUSH(0x23); // User mode DS | 0x3
+	PUSH((uint32_t)(stack_top+1)); // esp
+	uint32_t eflags; __asm__ volatile("pushfd; pop %0;" : "=r"(eflags));
+	PUSH(eflags|0x200); // EFLAGS
+	PUSH(0x1B); // User mode CS | 0x3
+	PUSH(entry_point); //
+	for(int i=0; i<8; ++i)
+	{// Initial register values
+		PUSH(0);
+	}
+	for(int i=0; i<4; ++i)
+	{// ds,es,fs,gs to user mode DS
+		PUSH(0x23);
+	}
+	PUSH((uint32_t)_return_to_userspace);
+
+	return (vptr_t*)stack_top;
+}
+
+vaddr_t init_elf_get_entry_point(uint8_t* elf)
 {
 	elf_header header=*(elf_header*)elf;
 
@@ -110,7 +124,7 @@ void setup_usermode_process(uint8_t* elf)
 	if(memcmp(&header, elf_magic, sizeof(elf_magic)) != 0)
 	{
 		kprintf("Elf header magic doesn't match\n");
-		return;
+		return 0;
 	}
 	elf_program_entry* programs=(elf_program_entry*)(elf+header.program_table);
 	elf_section_entry* sections=(elf_section_entry*)(elf+header.section_table);
@@ -132,5 +146,5 @@ void setup_usermode_process(uint8_t* elf)
 	current_process->brk=((programs[0].p_vaddr + programs[0].p_filesz) + 0x1000) & 0xFFFFF000;
 	kalloc_page(current_process->brk, false, true);
 
-	switch_to_usermode(header.entry);
+	return header.entry;
 }
