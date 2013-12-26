@@ -49,15 +49,13 @@ _syscall:
 	push es
 	push fs
 	push gs
-	push eax
 	mov ax, 0x10
 	mov ds, ax
 	mov es, ax
 	mov fs, ax
 	mov gs, ax
 	call syscall
-	mov [esp+48], eax ; Replace old eax with return value
-	pop eax
+	mov [esp+44], eax ; Replace old eax with return value
 	pop gs
 	pop fs
 	pop es

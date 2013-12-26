@@ -12,14 +12,16 @@
 
 typedef struct process
 {
-	void *esp;
-	void *stack;
+	vptr_t *esp;
+	vptr_t *stack;
+	vaddr_t eip;
 
 	uint32_t pid;
 
 	page_directory* pdir;
 	struct process* next;
-	vptr_t* esp0;
+	vptr_t *esp0;
+	vptr_t *kesp;
 	bool active;
 	bool ready;
 	vaddr_t brk;

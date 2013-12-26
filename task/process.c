@@ -8,6 +8,7 @@
 static uint32_t nextpid=2;
 extern page_directory* kernel_pdir;
 extern void _return_to_userspace(void);
+extern void _return_to_userspace_from_syscall(void);
 
 static void copy_open_resources(process *from, process *to)
 {
@@ -31,11 +32,11 @@ static void copy_open_resources(process *from, process *to)
 
 int fork(void)
 {
-	/*
 	__asm__ volatile("cli;");
 
 	process* parent=(process*)current_process;
 	page_directory* pdir=clone_page_directory_from(current_process->pdir);
+	change_pdir(pdir);
 	process* child=kmalloc(sizeof(process));
 	memset(child, 0, sizeof(process));
 	child->active=false;
@@ -43,7 +44,35 @@ int fork(void)
 	child->pid=nextpid++;
 	child->pdir=pdir;
 	child->esp0=kmalloc(KERNEL_STACK_SIZE);
-	memcpy(child->esp0, parent->esp0, KERNEL_STACK_SIZE);
+	child->kesp=child->esp0 + KERNEL_STACK_SIZE;
+	memset(child->esp0, 0, KERNEL_STACK_SIZE);
+
+	// Copy iret stuff from parent
+	memcpy(child->kesp-20, parent->kesp-20, 20);
+
+#define PUSH(x) --stack_top; *stack_top=x;
+	uint32_t *stack_top=(uint32_t*)(child->kesp-20);
+	for(int i=0; i<8; ++i)
+	{// Initial register values
+		PUSH(0);
+	}
+	for(int i=0; i<4; ++i)
+	{// ds,es,fs,gs to user mode DS
+		PUSH(0x23);
+	}
+	PUSH((uint32_t)_return_to_userspace);
+	for(int i=0; i<8; ++i)
+	{// Initial register values
+		PUSH(0);
+	}
+	child->kesp=(vptr_t*)stack_top;
+
+	child->brk=parent->brk;
+	child->stack=parent->stack;
+	child->esp=parent->esp;
+	child->eip=(vaddr_t)_return_to_userspace;
+
+	//memcpy(child->esp0, parent->esp0, KERNEL_STACK_SIZE);
 	memset(child->stdoutbuf, 0, 256);
 
 	//copy_open_resources(parent, child);
@@ -52,14 +81,11 @@ int fork(void)
 	while(p->next) p=p->next;
 	p->next=child;
 
-	child->eip=(uint32_t)_return_to_userspace;
 	child->ready=true;
-	__asm__ volatile("mov %0, ebp;"
-					 "mov %1, esp;"
-					 "sti;" : "=r"(child->ebp), "=r"(child->esp));
+	change_pdir(current_process->pdir);
+
+	__asm__ volatile("sti;");
 	return child->pid;
-	*/
-	return -1;
 }
 
 int getpid(void)
@@ -111,7 +137,6 @@ vptr_t *setup_usermode_stack(vaddr_t entry_point, vptr_t *stack_top_ptr)
 	{// ds,es,fs,gs to user mode DS
 		PUSH(0x23);
 	}
-	PUSH((uint32_t)_return_to_userspace);
 
 	return (vptr_t*)stack_top;
 }

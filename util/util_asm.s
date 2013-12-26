@@ -8,6 +8,7 @@ global _panic
 global _inb
 global _get_eip
 global _return_to_userspace
+global _return_to_userspace_from_syscall
 
 extern gdtptr
 extern idtptr

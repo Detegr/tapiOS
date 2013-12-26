@@ -40,11 +40,13 @@ void setup_initial_process(vaddr_t entry_point)
 	current_process->ready=true;
 	current_process->esp0=kmalloc(KERNEL_STACK_SIZE);
 	current_process->pid=1;
+	current_process->eip=(vaddr_t)_return_to_userspace;
 	tss.esp0=(uint32_t)current_process->esp0+KERNEL_STACK_SIZE;
+	current_process->kesp=current_process->esp0+KERNEL_STACK_SIZE;
 	memset(current_process->esp0, 0, KERNEL_STACK_SIZE);
 
 	__asm__ volatile(
 		"mov esp, %0;"
-		"ret;" :: "r"(current_process->esp));
+		"jmp %1;" :: "r"(current_process->esp),"r"(current_process->eip));
 }
 

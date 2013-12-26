@@ -76,7 +76,6 @@ void kmain(struct multiboot* b, uint32_t magic)
 	if(node)
 	{
 		struct file init;
-
 		vfs_open(node, &init);
 		uint8_t *init_mem=kmalloc(node->size);
 		int read=vfs_read(&init, init_mem, node->size);

@@ -229,8 +229,9 @@ int _readdir(DIR *dirp, struct dirent *ret)
 	}
 }
 
-void syscall(int call)
+void syscall(void *v)
 {
+	struct registers *r=(struct registers *)&v;
 	__asm__ volatile(
 		"mov eax, [%0];"
 		"push edx;"
@@ -240,5 +241,5 @@ void syscall(int call)
 		"pop ebx;"
 		"pop ebx;"
 		"pop ebx;"
-		:: "r"(&syscalls[call-1]));
+		:: "r"(&syscalls[r->eax-1]));
 }
