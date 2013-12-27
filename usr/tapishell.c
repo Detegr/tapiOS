@@ -14,6 +14,8 @@ int main()
 {
 	char buf[1024];
 	char cwd[1024];
+	memset(buf, 0, 1024);
+	memset(cwd, 0, 1024);
 	while(1)
 	{
 		printf("tapiShell :: %s # ", cwd[0] ? cwd : "/");
@@ -52,6 +54,7 @@ int main()
 			if(arg)
 			{
 				char to[1024];
+				memset(to, 0, 1024);
 				stpcpy(stpcpy(stpcpy(to, cwd), "/"), arg);
 				int fd=open(to, O_RDONLY);
 				if(fd>0)
@@ -67,7 +70,7 @@ int main()
 			int pid=fork();
 			if(pid==0)
 			{
-				for(int i=0; i<1000000; ++i)
+				for(int i=0; i<100000; ++i)
 				{
 					if(i%50000 == 0) printf("I am the child\n");
 				}
@@ -75,7 +78,7 @@ int main()
 			}
 			else printf("Forked child with pid: %d\n", pid);
 		}
-		else
+		else if(strlen(buf)>0)
 		{
 			printf("tapiShell :: Command not found: '%s'\n", buf);
 		}

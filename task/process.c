@@ -10,7 +10,7 @@ extern page_directory* kernel_pdir;
 extern void _return_to_userspace(void);
 extern void _return_to_userspace_from_syscall(void);
 
-static void copy_open_resources(process *from, process *to)
+static void copy_open_resources(struct process *from, struct process *to)
 {
 	for(int i=0; i<FD_MAX; ++i)
 	{
@@ -30,28 +30,10 @@ static void copy_open_resources(process *from, process *to)
 	}
 }
 
-int fork(void)
+vptr_t *setup_child_stack(vptr_t *stack_top_ptr)
 {
-	__asm__ volatile("cli;");
-
-	process* parent=(process*)current_process;
-	page_directory* pdir=clone_page_directory_from(current_process->pdir);
-	change_pdir(pdir);
-	process* child=kmalloc(sizeof(process));
-	memset(child, 0, sizeof(process));
-	child->active=false;
-	child->ready=false;
-	child->pid=nextpid++;
-	child->pdir=pdir;
-	child->esp0=kmalloc(KERNEL_STACK_SIZE);
-	child->kesp=child->esp0 + KERNEL_STACK_SIZE;
-	memset(child->esp0, 0, KERNEL_STACK_SIZE);
-
-	// Copy iret stuff from parent
-	memcpy(child->kesp-20, parent->esp0 + KERNEL_STACK_SIZE - 20, 20);
-
 #define PUSH(x) --stack_top; *stack_top=x;
-	uint32_t *stack_top=(uint32_t*)(child->kesp-20);
+	uint32_t *stack_top=(uint32_t*)stack_top_ptr;
 	for(int i=0; i<8; ++i)
 	{// Initial register values
 		PUSH(0);
@@ -65,23 +47,41 @@ int fork(void)
 	{// Initial register values
 		PUSH(0);
 	}
-	child->kesp=(vptr_t*)stack_top;
+	return (vptr_t*)stack_top;
+}
 
+int fork(void)
+{
+	__asm__ volatile("cli;");
+
+	struct process *parent=(struct process*)current_process;
+	page_directory* pdir=clone_page_directory_from(current_process->pdir);
+
+	change_pdir(pdir);
+	struct process *child=kmalloc(sizeof(struct process));
+	memset(child, 0, sizeof(struct process));
+	child->state=created;
+	child->active=false;
+	child->pid=nextpid++;
+	child->pdir=pdir;
+	child->esp0=kmalloc(KERNEL_STACK_SIZE);
+	child->kesp=child->esp0 + KERNEL_STACK_SIZE;
+
+	memcpy(child->kesp-20, parent->esp0 + KERNEL_STACK_SIZE - 20, 20);
+	child->kesp=setup_child_stack(child->kesp-20);
 	child->brk=parent->brk;
-	child->stack=parent->stack;
-	child->esp=parent->esp;
-	child->eip=(vaddr_t)_return_to_userspace;
+	child->user_stack=parent->user_stack;
 
-	//memcpy(child->esp0, parent->esp0, KERNEL_STACK_SIZE);
 	memset(child->stdoutbuf, 0, 256);
+	memset(child->keybuf, 0, 256);
 
-	//copy_open_resources(parent, child);
+	copy_open_resources(parent, child);
 
-	process* p=(process*)process_list;
+	struct process* p=(struct process*)process_list;
 	while(p->next) p=p->next;
 	p->next=child;
 
-	child->ready=true;
+	child->state=waiting;
 	change_pdir(current_process->pdir);
 
 	__asm__ volatile("sti;");
@@ -93,9 +93,9 @@ int getpid(void)
 	return current_process->pid;
 }
 
-process* find_active_process(void)
+struct process *find_active_process(void)
 {
-	process* p=(process*)process_list;
+	struct process *p=(struct process*)process_list;
 	while(!p->active)
 	{
 		if(!p) PANIC();

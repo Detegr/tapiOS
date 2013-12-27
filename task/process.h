@@ -10,21 +10,29 @@
 #define KERNEL_STACK_SIZE 2048
 #define FD_MAX 256
 
-typedef struct process
+typedef enum process_state
 {
-	vptr_t *esp;
-	vptr_t *stack;
-	vaddr_t eip;
+	created,
+	waiting,
+	running,
+	blocked
+} process_state;
+
+struct process
+{
+	vptr_t *user_stack;
+
+	vptr_t *esp0;
+	vptr_t *kesp;
 
 	uint32_t pid;
 
 	page_directory* pdir;
 	struct process* next;
-	vptr_t *esp0;
-	vptr_t *kesp;
-	bool active;
-	bool ready;
 	vaddr_t brk;
+
+	process_state state;
+	bool active;
 
 	uint8_t keyp;
 	char keybuf[256];
@@ -32,15 +40,15 @@ typedef struct process
 
 	struct open_files *files_open;
 	struct file *fds[FD_MAX];
-} process;
+};
 
 #ifndef SHARED_PROCESS_VARIABLES
-volatile process* current_process;
-volatile process* process_list;
+volatile struct process *current_process;
+volatile struct process *process_list;
 #define SHARED_PROCESS_VARIABLES
 #endif
 
-process* find_active_process(void);
+struct process* find_active_process(void);
 int fork(void);
 int getpid(void);
 int newfd(struct file *f);

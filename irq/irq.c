@@ -10,9 +10,9 @@ void timer_handler(void)
 {
 	if(!current_process) return;
 
-	process *new_process=(process*)current_process->next;
-	if(!new_process) new_process=(process*)process_list;
-	process *old_process=(process*)current_process;
+	struct process *new_process=(struct process*)current_process->next;
+	if(!new_process) new_process=(struct process*)process_list;
+	struct process *old_process=(struct process*)current_process;
 	if(old_process == new_process) return;
 
 	current_process=new_process;
@@ -51,7 +51,7 @@ void irq1_handler(void)
 	if(status & 0x1)
 	{
 		uint8_t scancode=inb(0x60);
-		process* p=find_active_process();
+		struct process* p=find_active_process();
 		if(!p) return; // No active userspace process, nothing to do
 		p->keybuf[p->keyp++]=scancode;
 	}

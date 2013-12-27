@@ -14,17 +14,18 @@ void* _sbrk(int32_t increment);
 int _open(const char* path, int flags);
 struct DIR *_opendir(const char *dirpath);
 int _readdir(DIR *dirp, struct dirent *ret);
+int _wait(int *status);
 
 typedef int(*syscall_ptr)();
 syscall_ptr syscalls[]={
 	&_exit, &_write, &_read, (syscall_ptr)&_sbrk,
 	&_open, (syscall_ptr)&_opendir, &_readdir,
-	&fork
+	&fork, &_wait
 };
 
 int _exit(int code)
 {
-	volatile process* p=process_list;
+	volatile struct process* p=process_list;
 	if(process_list == current_process)
 	{
 		process_list=process_list->next;
@@ -52,7 +53,7 @@ int _read(int fd, uint8_t* to, uint32_t count)
 		return vfs_read(f, to, count);
 	}
 	if(count==0) return 0;
-	process* p=find_active_process();
+	struct process* p=find_active_process();
 	if(!p) PANIC();
 	memset(p->keybuf, 0, 256);
 	uint32_t bufptr=0;
@@ -227,6 +228,11 @@ int _readdir(DIR *dirp, struct dirent *ret)
 	{
 		return -1;
 	}
+}
+
+int _wait(int *status)
+{
+	return -1;
 }
 
 void syscall(void *v)

@@ -8,7 +8,6 @@ global _panic
 global _inb
 global _get_eip
 global _return_to_userspace
-global _return_to_userspace_from_syscall
 
 extern gdtptr
 extern idtptr
@@ -55,11 +54,6 @@ _get_eip:
 	pop eax
 	jmp eax
 
-_return_to_userspace_from_syscall:
-	pop edx
-	pop ecx
-	pop ebx
-	pop eax
 _return_to_userspace:
 	pop gs
 	pop fs
