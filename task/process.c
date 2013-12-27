@@ -48,7 +48,7 @@ int fork(void)
 	memset(child->esp0, 0, KERNEL_STACK_SIZE);
 
 	// Copy iret stuff from parent
-	memcpy(child->kesp-20, parent->kesp-20, 20);
+	memcpy(child->kesp-20, parent->esp0 + KERNEL_STACK_SIZE - 20, 20);
 
 #define PUSH(x) --stack_top; *stack_top=x;
 	uint32_t *stack_top=(uint32_t*)(child->kesp-20);

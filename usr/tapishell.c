@@ -67,7 +67,7 @@ int main()
 			int pid=fork();
 			if(pid==0)
 			{
-				for(int i=0; i<100000; ++i)
+				for(int i=0; i<1000000; ++i)
 				{
 					if(i%50000 == 0) printf("I am the child\n");
 				}
