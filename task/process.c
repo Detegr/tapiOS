@@ -67,6 +67,9 @@ int fork(void)
 	child->esp0=kmalloc(KERNEL_STACK_SIZE);
 	child->kesp=child->esp0 + KERNEL_STACK_SIZE;
 
+	/* Copy 20 bytes from parent kernel stack to child's kernel stack.
+	 * These 20 bytes contain ss, esp, eflags, cs and eip.
+	 * We need these to return from the syscall in the child process. */
 	memcpy(child->kesp-20, parent->esp0 + KERNEL_STACK_SIZE - 20, 20);
 	child->kesp=setup_child_stack(child->kesp-20);
 	child->brk=parent->brk;

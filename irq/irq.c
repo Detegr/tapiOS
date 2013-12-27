@@ -20,6 +20,7 @@ void timer_handler(void)
 	physaddr_t pageaddr=get_page((vaddr_t)current_pdir) & 0xFFFFF000;
 	tss.esp0=((vaddr_t)current_process->esp0)+KERNEL_STACK_SIZE;
 
+	/* Handle EOI before switching the process */
 	__asm__ volatile(
 		"call pic_get_irq;"
 		"cmp al, 0xFF;"
@@ -32,6 +33,9 @@ void timer_handler(void)
 		"jmp .finish;"
 		".send_slave: out 0xA0, al;"
 		".finish:");
+	/* Save 8 general purpose registers, save old kernel stack pointer
+	 * and switch kernel stack pointers. Also change the page directory to
+	 * the switced process' page directory. */
 	__asm__ volatile(
 		"lea edx, 1f;"
 		"push edx;"
