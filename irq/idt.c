@@ -2,6 +2,7 @@
 #include "gdt.h"
 #include <terminal/vga.h>
 #include <stdint.h>
+#include <util/util.h>
 
 // Interrupt types
 #define GATE_INT32 0x8E
@@ -59,15 +60,15 @@ void setup_idt(void)
 	int i;
 	for(i=0; i<255; ++i)
 	{
-		idtentry(i, (uint32_t)&_noop_int, KERNEL_CODE_SELECTOR, GATE_INT32);
+		idtentry(i, (uint32_t)&_noop_int, KERNEL_CODE_SEGMENT, GATE_INT32);
 	}
 
-	idtentry(0x0E, (uint32_t)&_page_fault, KERNEL_CODE_SELECTOR, TRAP_INT32);
-	idtentry(0x20, (uint32_t)&_timer_handler, KERNEL_CODE_SELECTOR, GATE_INT32);
-	idtentry(0x21, (uint32_t)&_irq1_handler, KERNEL_CODE_SELECTOR, GATE_INT32);
-	idtentry(0x27, (uint32_t)&_spurious_irq_check_master, KERNEL_CODE_SELECTOR, GATE_INT32);
-	idtentry(0x2F, (uint32_t)&_spurious_irq_check_slave, KERNEL_CODE_SELECTOR, GATE_INT32);
-	idtentry(0x80, (uint32_t)&_syscall, KERNEL_CODE_SELECTOR, GATE_INT32_USER_PRIVILEGE);
+	idtentry(0x0E, (uint32_t)&_page_fault, KERNEL_CODE_SEGMENT, TRAP_INT32);
+	idtentry(0x20, (uint32_t)&_timer_handler, KERNEL_CODE_SEGMENT, GATE_INT32);
+	idtentry(0x21, (uint32_t)&_irq1_handler, KERNEL_CODE_SEGMENT, GATE_INT32);
+	idtentry(0x27, (uint32_t)&_spurious_irq_check_master, KERNEL_CODE_SEGMENT, GATE_INT32);
+	idtentry(0x2F, (uint32_t)&_spurious_irq_check_slave, KERNEL_CODE_SEGMENT, GATE_INT32);
+	idtentry(0x80, (uint32_t)&_syscall, KERNEL_CODE_SEGMENT, GATE_INT32_USER_PRIVILEGE);
 
 	idtptr.limit=sizeof(idt)-1;
 	idtptr.base=(unsigned int)&idt;

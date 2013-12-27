@@ -45,8 +45,8 @@ void tssentry(uint32_t n, uint16_t esp0, uint16_t ss0)
 	gdtentry(n, base, limit, 0x89, 0x4); // 0x89: Present|Executable|Accessed, 0x4: size
 	tss.esp0=esp0;
 	tss.ss0=ss0;
-	tss.cs = KERNEL_CODE_SELECTOR | 0x3; // Privilege mode 3
-	tss.ss=tss.ds=tss.es=tss.fs=tss.gs=KERNEL_DATA_SELECTOR | 0x03;
+	tss.cs = KERNEL_CODE_SEGMENT | 0x3; // Privilege mode 3
+	tss.ss=tss.ds=tss.es=tss.fs=tss.gs=KERNEL_DATA_SEGMENT | 0x03;
 }
 
 static inline void setgdt(struct gdt_ptr *gdtptr)
@@ -73,7 +73,7 @@ void setup_gdt(void)
 	gdtentry(3, 0, 0xFFFFFFFF, 0xFA, 0x0F); // User mode code segment (0x9A but privilege level 3)
 	gdtentry(4, 0, 0xFFFFFFFF, 0xF2, 0x0F); // User mode data segment (0x92 but privilege level 3)
 	// TSS
-	tssentry(5, 0x0, KERNEL_DATA_SELECTOR);
+	tssentry(5, 0x0, KERNEL_DATA_SEGMENT);
 	gdtptr.limit=sizeof(gdt)-1;
 	gdtptr.base=(unsigned int)&gdt;
 	setgdt(&gdtptr);

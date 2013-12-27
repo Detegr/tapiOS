@@ -34,6 +34,10 @@ vptr_t *setup_child_stack(vptr_t *stack_top_ptr)
 {
 #define PUSH(x) --stack_top; *stack_top=x;
 	uint32_t *stack_top=(uint32_t*)stack_top_ptr;
+
+	/* These are for _return_to_userspace function
+	 * that does popping the segment registers and
+	 * popa for general purpose registers. */
 	for(int i=0; i<8; ++i)
 	{// Initial register values
 		PUSH(0);
@@ -42,6 +46,11 @@ vptr_t *setup_child_stack(vptr_t *stack_top_ptr)
 	{// ds,es,fs,gs to user mode DS
 		PUSH(0x23);
 	}
+
+	/* These are for returning from irq_handler for the first time.
+	 * irq_handler calls popa so we need to push initial register values
+	 * and then it does ret, where in the first time we want to jump to
+	 * _return_to_userspace instead of the label 1. */
 	PUSH((uint32_t)_return_to_userspace);
 	for(int i=0; i<8; ++i)
 	{// Initial register values
@@ -126,19 +135,33 @@ vptr_t *setup_usermode_stack(vaddr_t entry_point, vptr_t *stack_top_ptr)
 {
 #define PUSH(x) --stack_top; *stack_top=x;
 	uint32_t *stack_top=(uint32_t*)stack_top_ptr;
-	PUSH(0x23); // User mode DS | 0x3
-	PUSH((uint32_t)(stack_top+1)); // esp
+
+	/* This part of the stack is the stack to iret to user mode in x86 processors.
+	 * It contains (bottom-up):
+	 * 	Ring3 EIP
+	 * 	Ring3 CS
+	 * 	EFLAGS
+	 * 	Ring3 ESP
+	 * 	Ring3 DS */
+
+	// 0x3 is the user privilege level
+	PUSH(USER_DATA_SEGMENT | 0x3);
+	PUSH((uint32_t)(stack_top+1));
 	uint32_t eflags; __asm__ volatile("pushfd; pop %0;" : "=r"(eflags));
-	PUSH(eflags|0x200); // EFLAGS
-	PUSH(0x1B); // User mode CS | 0x3
-	PUSH(entry_point); //
+	PUSH(eflags|0x200); // Enable interrupts in EFLAGS
+	PUSH(USER_CODE_SEGMENT | 0x3);
+	PUSH(entry_point);
+
+	/* This part of the stack is for _return_to_userspace
+	 * function that pops segment registers and does popa
+	 * for general purpose registers. */
 	for(int i=0; i<8; ++i)
 	{// Initial register values
 		PUSH(0);
 	}
 	for(int i=0; i<4; ++i)
 	{// ds,es,fs,gs to user mode DS
-		PUSH(0x23);
+		PUSH(USER_DATA_SEGMENT | 0x3);
 	}
 
 	return (vptr_t*)stack_top;
