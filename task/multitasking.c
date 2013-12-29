@@ -22,7 +22,7 @@ void setup_tasking(void)
 	print_startup_info("Tasking system", true);
 }
 
-void setup_initial_process(vaddr_t entry_point)
+vptr_t *setup_process_stack(void)
 {
 	vptr_t *stack=NULL;
 	for(uint32_t i=0xB0000000; i<=0xB0004000; i+=0x1000)
@@ -30,7 +30,12 @@ void setup_initial_process(vaddr_t entry_point)
 		if(!stack) stack=kalloc_page(i, false, true);
 		else kalloc_page(i, false, true);
 	}
+	return stack;
+}
 
+void setup_initial_process(vaddr_t entry_point)
+{
+	vptr_t *stack=setup_process_stack();
 	vptr_t *stack_top=setup_usermode_stack(entry_point, stack + STACK_SIZE);
 
 	__asm__ volatile("cli");

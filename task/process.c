@@ -30,6 +30,21 @@ static void copy_open_resources(struct process *from, struct process *to)
 	}
 }
 
+vptr_t *setup_exec_stack(vptr_t *stack_top_ptr)
+{
+#define PUSH(x) --stack_top; *stack_top=x;
+	uint32_t *stack_top=(uint32_t*)stack_top_ptr;
+	for(int i=0; i<8; ++i)
+	{// Initial register values
+		PUSH(0);
+	}
+	for(int i=0; i<4; ++i)
+	{// ds,es,fs,gs to user mode DS
+		PUSH(0x23);
+	}
+	return (vptr_t*)stack_top;
+}
+
 vptr_t *setup_child_stack(vptr_t *stack_top_ptr)
 {
 #define PUSH(x) --stack_top; *stack_top=x;

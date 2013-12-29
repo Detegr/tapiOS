@@ -12,6 +12,7 @@ int command(const char *cmd, const char *cmd_space, const char *cmp)
 
 int main()
 {
+	printf("tapiShell v0.0.1\n");
 	char buf[1024];
 	char cwd[1024];
 	memset(buf, 0, 1024);
@@ -65,6 +66,7 @@ int main()
 				}
 			}
 		}
+		/*
 		else if(command("fork", "fork ", buf))
 		{
 			int pid=fork();
@@ -77,6 +79,11 @@ int main()
 				__asm__ volatile("movl $0x1, %eax; int $0x80;");
 			}
 			else printf("Forked child with pid: %d\n", pid);
+		}
+		*/
+		else if(command("exec", "exec ", buf))
+		{
+			exec("/bin/init");
 		}
 		else if(strlen(buf)>0)
 		{

@@ -1,5 +1,6 @@
 #include "syscalls.h"
 #include <task/process.h>
+#include <task/multitasking.h>
 #include <terminal/vga.h>
 #include <irq/irq.h>
 #include <util/scancodes.h>
@@ -7,20 +8,24 @@
 #include <mem/heap.h>
 #include <fs/vfs.h>
 
+extern void _return_from_exec(void);
+extern void _return_to_userspace(void);
+
 int _exit(int code);
 int _write(int fd, uint8_t* to, uint32_t size);
-int _read(int fd, uint8_t* from, uint32_t size);
+int _read(int fd, uint8_t* to, uint32_t size);
 void* _sbrk(int32_t increment);
 int _open(const char* path, int flags);
 struct DIR *_opendir(const char *dirpath);
 int _readdir(DIR *dirp, struct dirent *ret);
 int _wait(int *status);
+int _exec(const char *path);
 
 typedef int(*syscall_ptr)();
 syscall_ptr syscalls[]={
 	&_exit, &_write, &_read, (syscall_ptr)&_sbrk,
 	&_open, (syscall_ptr)&_opendir, &_readdir,
-	&fork, &_wait
+	&fork, &_wait, &_exec
 };
 
 int _exit(int code)
@@ -233,6 +238,33 @@ int _readdir(DIR *dirp, struct dirent *ret)
 int _wait(int *status)
 {
 	return -1;
+}
+
+int _exec(const char *path)
+{
+	int fd=_open(path, 0);
+	if(fd<0) return -1;
+
+	page_directory *pdir=new_page_directory_from(current_process->pdir);
+	// TODO: Free old pdir and old stack
+	change_pdir(pdir);
+	current_process->pdir=pdir;
+	current_process->user_stack=setup_process_stack();
+
+	struct file *f=current_process->fds[fd];
+	uint8_t *prog=kmalloc(f->inode->size);
+	uint32_t r=_read(fd, prog, f->inode->size);
+	if(!(r==f->inode->size || r==0)) PANIC();
+
+	vaddr_t entry=init_elf_get_entry_point(prog);
+
+	uint32_t *esp=(uint32_t*)(current_process->esp0 + KERNEL_STACK_SIZE - 20);
+	// Set EIP to new code's entry point
+	*esp = entry;
+	esp=(uint32_t*)setup_exec_stack((vptr_t*)esp);
+	__asm__ volatile("mov esp, %0; jmp %1" :: "r"(esp), "r"((uint32_t)_return_to_userspace));
+
+	return 0; // Never reached
 }
 
 void syscall(void *v)

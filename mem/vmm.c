@@ -115,7 +115,7 @@ static void clone_page_table(uint32_t i)
 	}
 }
 
-page_directory* clone_page_directory_from(page_directory* src)
+page_directory *clone_page_directory_internal(page_directory *src, bool copy)
 {
 	page_directory* ret=kmalloc(sizeof(page_directory));
 	memset(ret, 0, sizeof(page_directory));
@@ -138,7 +138,7 @@ page_directory* clone_page_directory_from(page_directory* src)
 		{
 			ret->entries[i].as_uint32=kernel_pdir->entries[i].as_uint32;
 		}
-		else
+		else if(copy)
 		{
 			physaddr_t paddr=kalloc_page_frame();
 			ret->entries[i].as_uint32=paddr|PRESENT|READWRITE|USERMODE;
@@ -150,6 +150,16 @@ page_directory* clone_page_directory_from(page_directory* src)
 	current_pdir->entries[1022].as_uint32=0;
 	ret->entries[1023].as_uint32=ret_pdir_paddr|PRESENT|USERMODE;
 	return ret;
+}
+
+inline page_directory *clone_page_directory_from(page_directory *src)
+{
+	return clone_page_directory_internal(src, true);
+}
+
+inline page_directory *new_page_directory_from(page_directory *src)
+{
+	return clone_page_directory_internal(src, false);
 }
 
 void setup_vmm(void)
