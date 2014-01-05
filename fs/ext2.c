@@ -184,17 +184,22 @@ int32_t ext2_open(struct file *f)
 
 static int read_block(ext2_superblock *sb, struct file *f, uint8_t *block, uint8_t *to, uint32_t count)
 {
+	/* f is an optional parameter because we don't want to modify the position of
+	 * struct file *f when reading doubly or triply indirect blocks.
+	 */
+	uint32_t pos=f?f->pos:0;
 	uint32_t ret=0;
 	for(uint32_t i=0; i<BLOCKSIZE(sb); ++i, ++ret)
 	{
-		if(f->pos == count) break;
-		else if(f->pos >= f->inode->size)
+		if(pos == count) break;
+		else if(f && pos >= f->inode->size)
 		{
 			ret=0;
 			break;
 		}
-		to[f->pos++]=block[i];
+		to[pos++]=block[i];
 	}
+	if(f) f->pos=pos;
 	return ret;
 }
 
@@ -228,10 +233,27 @@ static int read_blocks(ext2_superblock *sb, struct file *f, uint8_t *to, uint32_
 	}
 	if(blocks[DOUBLY_INDIRECT_BLOCK])
 	{
-		PANIC();
-		uint8_t singly_indirect_block[BLOCKSIZE(sb)*sizeof(uint32_t)];
+		uint8_t doubly_indirect_block[BLOCKSIZE(sb)*sizeof(uint32_t)];
+		read_block(sb, NULL, get_block(sb, blocks[DOUBLY_INDIRECT_BLOCK]), doubly_indirect_block, BLOCKSIZE(sb));
+		for(uint32_t i=0; i<BLOCKSIZE(sb); ++i)
+		{
+			read_indirect_block(sb, f, (uint32_t*)get_block(sb, doubly_indirect_block[i]), &to[ret], count);
+		}
 	}
-	if(blocks[TRIPLY_INDIRECT_BLOCK]) PANIC(); // TODO
+	if(blocks[TRIPLY_INDIRECT_BLOCK])
+	{
+		uint8_t doubly_indirect_block[BLOCKSIZE(sb)*sizeof(uint32_t)];
+		read_block(sb, NULL, get_block(sb, blocks[DOUBLY_INDIRECT_BLOCK]), doubly_indirect_block, BLOCKSIZE(sb));
+		for(uint32_t i=0; i<BLOCKSIZE(sb); ++i)
+		{
+			uint8_t triply_indirect_block[BLOCKSIZE(sb)*sizeof(uint32_t)];
+			read_block(sb, NULL, get_block(sb, doubly_indirect_block[i]), triply_indirect_block, BLOCKSIZE(sb));
+			for(uint32_t j=0; j<BLOCKSIZE(sb); ++j)
+			{
+				read_indirect_block(sb, f, (uint32_t*)get_block(sb, triply_indirect_block[j]), &to[ret], count);
+			}
+		}
+	}
 	if(f->pos >= f->inode->size) return 0;
 	else return f->pos;
 }
