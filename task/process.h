@@ -54,6 +54,5 @@ int getpid(void);
 int newfd(struct file *f);
 vaddr_t init_elf_get_entry_point(uint8_t* elf);
 vptr_t *setup_usermode_stack(vaddr_t entry_point, vptr_t *stack_top_ptr);
-vptr_t *setup_exec_stack(vptr_t *stack_top_ptr);
 
 #endif

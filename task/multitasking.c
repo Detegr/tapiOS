@@ -11,8 +11,6 @@ extern void _return_to_userspace(void);
 extern uint32_t stack;
 static uint32_t* stack_end_ptr=&stack;
 
-#define STACK_SIZE 0x4000 // 16kB
-
 void setup_tasking(void)
 {
 	process_list=kmalloc(sizeof(struct process));

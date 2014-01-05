@@ -257,12 +257,9 @@ int _exec(const char *path)
 	if(!(r==f->inode->size || r==0)) PANIC();
 
 	vaddr_t entry=init_elf_get_entry_point(prog);
+	vptr_t *stack_top=setup_usermode_stack(entry, current_process->user_stack + STACK_SIZE);
 
-	uint32_t *esp=(uint32_t*)(current_process->esp0 + KERNEL_STACK_SIZE - 20);
-	// Set EIP to new code's entry point
-	*esp = entry;
-	esp=(uint32_t*)setup_exec_stack((vptr_t*)esp);
-	__asm__ volatile("mov esp, %0; jmp %1" :: "r"(esp), "r"((uint32_t)_return_to_userspace));
+	__asm__ volatile("mov esp, %0; jmp %1" :: "r"(stack_top), "r"((uint32_t)_return_to_userspace));
 
 	return 0; // Never reached
 }
