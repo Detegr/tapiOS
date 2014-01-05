@@ -9,6 +9,8 @@
 #define SUPERBLOCK_SIZE 1024
 #define SUPERBLOCK_OFFSET 1024
 
+#define BLOCKSIZE(x) (uint32_t)(1024 << ((ext2_superblock*)x)->block_size_shift)
+
 static void DEBUG_print_superblock(ext2_superblock* b)
 {
 	kprintf("inodes: %d\n", b->inodes);
@@ -51,7 +53,7 @@ static void DEBUG_print_blockgroup_descriptor(ext2_blockgroup_descriptor* b)
 static void* get_block(ext2_superblock* b, int block)
 {
 	void* p=b;
-	return p - SUPERBLOCK_SIZE + ((1024 << b->block_size_shift) * block);
+	return p - SUPERBLOCK_SIZE + (BLOCKSIZE(b) * block);
 }
 
 static ext2_directory* advance(ext2_directory* d)
@@ -68,7 +70,7 @@ static ext2_inode* read_inode(ext2_superblock* b, int inode_index)
 	int blockgroup=(inode_index-1) / b->inodes_in_blockgroup;
 	int index=(inode_index-1) % b->inodes_in_blockgroup;
 	int inode_size=b->version_major >= 1 ? b->inode_size : 128;
-	int block=(index * inode_size) / (1024 << b->block_size_shift);
+	int block=(index * inode_size) / BLOCKSIZE(b);
 	ext2_blockgroup_descriptor* bg_table=(ext2_blockgroup_descriptor*)((uint8_t*)b + SUPERBLOCK_SIZE + (blockgroup * sizeof(ext2_blockgroup_descriptor)));
 	ext2_blockgroup_descriptor* bg=&bg_table[blockgroup];
 	ext2_inode* inode_table=get_block(b, bg->inode_table_block);
@@ -95,7 +97,7 @@ static struct dirent* ext2_readdir(struct inode *node)
 
 	if(prevnode==node)
 	{
-		if(dir && ((uint32_t)dir-(uint32_t)bdir < 1024))
+		if(dir && ((uint32_t)dir-(uint32_t)bdir < BLOCKSIZE(node->superblock)))
 		{
 			dirent.d_ino=dir->inode;
 			memcpy(&dirent.d_name, &dir->name, dir->name_length_low);
@@ -121,7 +123,7 @@ static struct dirent* ext2_readdir(struct inode *node)
 		}
 		// TODO: Other data blocks
 		bdir=dir=get_block(node->superblock, inode->blocks[0]);
-		if(dir && ((uint32_t)bdir-(uint32_t)dir < 1024))
+		if(dir && ((uint32_t)bdir-(uint32_t)dir < BLOCKSIZE(node->superblock)))
 		{
 			dirent.d_ino=dir->inode;
 			memcpy(&dirent.d_name, &dir->name, dir->name_length_low);
@@ -133,9 +135,9 @@ static struct dirent* ext2_readdir(struct inode *node)
 	}
 }
 
-static inline bool inside_dir(ext2_directory *dir, ext2_directory *dir_base)
+static inline bool inside_dir(ext2_directory *dir, ext2_directory *dir_base, uint32_t dirsize)
 {
-	return (dir && ((uint32_t)dir-(uint32_t)dir_base < 1024));
+	return (dir && ((uint32_t)dir-(uint32_t)dir_base < dirsize));
 }
 
 static inline uint32_t min(uint32_t a, uint32_t b)
@@ -150,7 +152,7 @@ struct inode *ext2_search(struct inode *node, const char *name)
 	// TODO: Other data blocks
 	ext2_directory *bdir;
 	ext2_directory *dir=bdir=get_block(node->superblock, inode->blocks[0]);
-	while(inside_dir(dir, bdir))
+	while(inside_dir(dir, bdir, BLOCKSIZE(node->superblock)))
 	{
 		if(strlen(name) == dir->name_length_low)
 		{
@@ -183,7 +185,7 @@ int32_t ext2_open(struct file *f)
 static int read_block(ext2_superblock *sb, struct file *f, uint8_t *block, uint8_t *to, uint32_t count)
 {
 	uint32_t ret=0;
-	for(uint32_t i=0; i<1024; ++i, ++ret)
+	for(uint32_t i=0; i<BLOCKSIZE(sb); ++i, ++ret)
 	{
 		if(f->pos == count) break;
 		else if(f->pos >= f->inode->size)
@@ -224,7 +226,11 @@ static int read_blocks(ext2_superblock *sb, struct file *f, uint8_t *to, uint32_
 	{
 		read_indirect_block(sb, f, (uint32_t*)get_block(sb, blocks[SINGLY_INDIRECT_BLOCK]), &to[ret], count);
 	}
-	if(blocks[DOUBLY_INDIRECT_BLOCK]) PANIC(); // TODO
+	if(blocks[DOUBLY_INDIRECT_BLOCK])
+	{
+		PANIC();
+		uint8_t singly_indirect_block[BLOCKSIZE(sb)*sizeof(uint32_t)];
+	}
 	if(blocks[TRIPLY_INDIRECT_BLOCK]) PANIC(); // TODO
 	if(f->pos >= f->inode->size) return 0;
 	else return f->pos;
