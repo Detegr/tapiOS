@@ -10,7 +10,7 @@ int command(const char *cmd, const char *cmd_space, const char *cmp)
 	return (strcmp(cmp, cmd)==0 || strncmp(cmp, cmd_space, strlen(cmd_space)) == 0);
 }
 
-int main()
+int main(int argc, char **argv)
 {
 	printf("tapiShell v0.0.1\n");
 	char buf[1024];
@@ -39,6 +39,7 @@ int main()
 			if(arg)
 			{
 				char to[1024];
+				memset(to, 0, 1024);
 				stpcpy(stpcpy(stpcpy(to, cwd), "/"), arg);
 				DIR *d=opendir(to);
 				if(d) strcpy(cwd, to);
@@ -66,7 +67,6 @@ int main()
 				}
 			}
 		}
-		/*
 		else if(command("fork", "fork ", buf))
 		{
 			int pid=fork();
@@ -80,14 +80,26 @@ int main()
 			}
 			else printf("Forked child with pid: %d\n", pid);
 		}
-		*/
 		else if(command("exec", "exec ", buf))
 		{
-			exec("/bin/init");
+			char *argv[2]={"/bin/init", NULL};
+			execve("/bin/init", argv, NULL);
 		}
 		else if(strlen(buf)>0)
 		{
-			printf("tapiShell :: Command not found: '%s'\n", buf);
+			int pid=fork();
+			if(!pid)
+			{
+				char *argv[2];
+				char cmd[1024];
+				memset(cmd, 0, 1024);
+				stpcpy(stpcpy(cmd, "/bin/"), buf);
+				argv[0]=cmd;
+				argv[1]=NULL;
+				execve(cmd, argv, NULL);
+				printf("tapiShell :: Command not found: '%s'\n", buf);
+				__asm__ volatile("mov $1, %eax; int $0x80;");
+			}
 		}
 	}
 	return 0;

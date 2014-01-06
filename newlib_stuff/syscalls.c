@@ -48,8 +48,6 @@ char **environ;
 
 void _exit() {}
 int close(int file) {return -1;}
-int execve(char *name, char **argv, char **env) {}
-int fork();
 int fstat(int file, struct stat *st)
 {
 	return -1;
@@ -111,7 +109,7 @@ int wait(int *status)
 	return -1;
 }
 
-int exec(const char *path)
+int execve(const char *path, char **const argv, char **const envp)
 {
-	SYSCALL1(EXEC, path);
+	SYSCALL3(EXEC, path, argv, envp);
 }

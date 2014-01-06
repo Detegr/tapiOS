@@ -19,7 +19,7 @@ int _open(const char* path, int flags);
 struct DIR *_opendir(const char *dirpath);
 int _readdir(DIR *dirp, struct dirent *ret);
 int _wait(int *status);
-int _exec(const char *path);
+int _exec(const char *path, char **const argv, char **const envp);
 
 typedef int(*syscall_ptr)();
 syscall_ptr syscalls[]={
@@ -240,10 +240,17 @@ int _wait(int *status)
 	return -1;
 }
 
-int _exec(const char *path)
+int _exec(const char *path, char **const argv, char **const envp)
 {
 	int fd=_open(path, 0);
 	if(fd<0) return -1;
+
+	int argc=0;
+	for(int i=0;; ++i, ++argc)
+	{
+		char *p=argv[i];
+		if(!p) break;
+	}
 
 	page_directory *pdir=new_page_directory_from(current_process->pdir);
 	// TODO: Free old pdir and old stack
@@ -257,7 +264,7 @@ int _exec(const char *path)
 	if(!(r==f->inode->size || r==0)) PANIC();
 
 	vaddr_t entry=init_elf_get_entry_point(prog);
-	vptr_t *stack_top=setup_usermode_stack(entry, current_process->user_stack + STACK_SIZE);
+	vptr_t *stack_top=setup_usermode_stack(entry, argc, argv, current_process->user_stack + STACK_SIZE);
 
 	__asm__ volatile("mov esp, %0; jmp %1" :: "r"(stack_top), "r"((uint32_t)_return_to_userspace));
 

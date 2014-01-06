@@ -4,6 +4,7 @@
 .extern __bss_end
 
 _start:
+	popl %ecx ; DS
 	movl $__bss_start, %edi
 	movl $__bss_end, %ecx
 	sub %edi, %ecx
