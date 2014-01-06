@@ -23,16 +23,8 @@ int main(int argc, char **argv)
 		fflush(stdout);
 		fgets(buf, 1024, stdin);
 		buf[strlen(buf)-1]=0;
-		if(command("ls", "ls ", buf))
-		{
-			DIR *d=opendir(cwd[0] ? cwd : "/");
-			struct dirent *dep;
-			while((dep=readdir(d)))
-			{
-				printf("%s\n", dep->d_name);
-			}
-		}
-		else if(command("cd","cd ",buf))
+
+		if(command("cd","cd ",buf))
 		{
 			strtok(buf, " ");
 			char *arg=strtok(NULL, " ");
@@ -67,35 +59,18 @@ int main(int argc, char **argv)
 				}
 			}
 		}
-		else if(command("fork", "fork ", buf))
-		{
-			int pid=fork();
-			if(pid==0)
-			{
-				for(int i=0; i<100000; ++i)
-				{
-					if(i%50000 == 0) printf("I am the child\n");
-				}
-				__asm__ volatile("movl $0x1, %eax; int $0x80;");
-			}
-			else printf("Forked child with pid: %d\n", pid);
-		}
-		else if(command("exec", "exec ", buf))
-		{
-			char *argv[2]={"/bin/init", NULL};
-			execve("/bin/init", argv, NULL);
-		}
 		else if(strlen(buf)>0)
 		{
 			int pid=fork();
 			if(!pid)
 			{
-				char *argv[2];
+				char *argv[3];
 				char cmd[1024];
 				memset(cmd, 0, 1024);
 				stpcpy(stpcpy(cmd, "/bin/"), buf);
 				argv[0]=cmd;
-				argv[1]=NULL;
+				argv[1]=cwd[0] ? cwd : "/";
+				argv[2]=NULL;
 				execve(cmd, argv, NULL);
 				printf("tapiShell :: Command not found: '%s'\n", buf);
 				__asm__ volatile("mov $1, %eax; int $0x80;");

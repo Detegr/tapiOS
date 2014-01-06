@@ -252,7 +252,9 @@ int _exec(const char *path, char **const argv, char **const envp)
 		if(!p) break;
 	}
 
-	page_directory *pdir=new_page_directory_from(current_process->pdir);
+	page_directory *old_pdir=current_process->pdir;
+	page_directory *pdir=new_page_directory_from(old_pdir);
+
 	// TODO: Free old pdir and old stack
 	change_pdir(pdir);
 	current_process->pdir=pdir;
@@ -264,7 +266,28 @@ int _exec(const char *path, char **const argv, char **const envp)
 	if(!(r==f->inode->size || r==0)) PANIC();
 
 	vaddr_t entry=init_elf_get_entry_point(prog);
-	vptr_t *stack_top=setup_usermode_stack(entry, argc, argv, current_process->user_stack + STACK_SIZE);
+
+	// TODO: This current_process->brk fiddling is ugly.
+	char **argv_copy=(char**)current_process->brk;
+	for(int i=0; i<argc; ++i)
+	{
+		change_pdir(old_pdir);
+		int len=strlen(argv[i])+1;
+		char str[len];
+		memcpy(str, argv[i], len);
+		change_pdir(pdir);
+
+		// TODO: Calculate this in a reasonable way...
+		current_process->brk+=0x1000;
+		argv_copy[i]=(char*)kalloc_page(current_process->brk, false, true);
+
+		memcpy(argv_copy[i], str, len);
+	}
+	argv_copy[argc]=NULL;
+	current_process->brk+=0x1000;
+	kalloc_page(current_process->brk, false, true);
+
+	vptr_t *stack_top=setup_usermode_stack(entry, argc, argv_copy, current_process->user_stack + STACK_SIZE);
 
 	__asm__ volatile("mov esp, %0; jmp %1" :: "r"(stack_top), "r"((uint32_t)_return_to_userspace));
 
