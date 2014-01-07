@@ -14,6 +14,7 @@
 #include <fs/vfs.h>
 #include <fs/ext2.h>
 #include <task/multitasking.h>
+#include <task/processtree.h>
 
 #define KERNEL_VMA 0xC0000000
 
@@ -64,6 +65,7 @@ void kmain(struct multiboot* b, uint32_t magic)
 	setup_bitmap();
 	setup_vmm();
 	setup_tasking();
+	setup_process_tree();
 	set_timer_freq(100);
 
 	b=(struct multiboot*)((uint8_t*)b+KERNEL_VMA);

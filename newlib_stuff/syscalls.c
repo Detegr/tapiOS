@@ -35,7 +35,7 @@
 #define SYSCALL3(n,arg1,arg2,arg3) \
 	int ret; \
 	__asm__ volatile("int $0x80;" : "=a"(ret) : "0"(n), "b"(arg1), "c"(arg2), "d"(arg3)); \
-	return (void*)ret;
+	return ret;
 
 // Where should the definition of these go?
 typedef struct DIR
@@ -79,7 +79,6 @@ caddr_t sbrk(int incr)
 int stat(const char *file, struct stat *st);
 clock_t times(struct tms *buf);
 int unlink(char *name);
-int wait(int *status);
 int write(int file, char *ptr, int len)
 {
 	SYSCALL3(WRITE, file, ptr, len);
@@ -106,7 +105,7 @@ int fork(void)
 
 int wait(int *status)
 {
-	return -1;
+	SYSCALL1(WAIT, status);
 }
 
 int execve(const char *path, char **const argv, char **const envp)

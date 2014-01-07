@@ -75,6 +75,7 @@ int main(int argc, char **argv)
 				printf("tapiShell :: Command not found: '%s'\n", buf);
 				__asm__ volatile("mov $1, %eax; int $0x80;");
 			}
+			wait(NULL);
 		}
 	}
 	return 0;

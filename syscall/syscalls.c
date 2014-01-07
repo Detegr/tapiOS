@@ -7,6 +7,7 @@
 #include <task/process.h>
 #include <mem/heap.h>
 #include <fs/vfs.h>
+#include <task/processtree.h>
 
 extern void _return_from_exec(void);
 extern void _return_to_userspace(void);
@@ -34,6 +35,7 @@ int _exit(int code)
 	if(process_list == current_process)
 	{
 		process_list=process_list->next;
+		delete_process_from_process_tree((struct process*)current_process);
 		__asm__ volatile("sti; hlt");
 		return code;
 	}
@@ -42,6 +44,7 @@ int _exit(int code)
 		if(p->next==current_process)
 		{
 			p->next=current_process->next;
+			delete_process_from_process_tree((struct process*)current_process);
 			__asm__ volatile("sti; hlt");
 			return code;
 		}
@@ -237,7 +240,13 @@ int _readdir(DIR *dirp, struct dirent *ret)
 
 int _wait(int *status)
 {
-	return -1;
+	struct pnode const *pnode=find_process_from_process_tree((struct process*)current_process);
+	if(!pnode->first_child) return -1;
+	int pid=pnode->first_child->process->pid;
+	current_process->state=waiting;
+	while(pnode->first_child) __asm__("sti;hlt");
+	current_process->state=running;
+	return pid;
 }
 
 int _exec(const char *path, char **const argv, char **const envp)

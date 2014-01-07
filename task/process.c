@@ -4,6 +4,7 @@
 #include <util/util.h>
 #include <terminal/vga.h>
 #include "elf.h"
+#include "processtree.h"
 
 #define PUSH(x) --stack_top; *stack_top=(uint32_t)x;
 
@@ -93,6 +94,8 @@ int fork(void)
 	struct process* p=(struct process*)process_list;
 	while(p->next) p=p->next;
 	p->next=child;
+
+	insert_process_to_process_tree(child, parent);
 
 	child->state=waiting;
 	change_pdir(current_process->pdir);
