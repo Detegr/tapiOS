@@ -97,7 +97,7 @@ int fork(void)
 
 	insert_process_to_process_tree(child, parent);
 
-	child->state=waiting;
+	child->state=created;
 	change_pdir(current_process->pdir);
 
 	__asm__ volatile("sti;");

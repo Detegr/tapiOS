@@ -8,6 +8,7 @@
 #include <mem/heap.h>
 #include <fs/vfs.h>
 #include <task/processtree.h>
+#include <task/scheduler.h>
 
 extern void _return_from_exec(void);
 extern void _return_to_userspace(void);
@@ -31,25 +32,14 @@ syscall_ptr syscalls[]={
 
 int _exit(int code)
 {
-	volatile struct process* p=process_list;
-	if(process_list == current_process)
-	{
-		process_list=process_list->next;
-		delete_process_from_process_tree((struct process*)current_process);
-		__asm__ volatile("sti; hlt");
-		return code;
-	}
-	while(true)
-	{
-		if(p->next==current_process)
-		{
-			p->next=current_process->next;
-			delete_process_from_process_tree((struct process*)current_process);
-			__asm__ volatile("sti; hlt");
-			return code;
-		}
-		p=p->next;
-	}
+	current_process->state=finished;
+	reap_finished_processes();
+
+	/* Wait for the process to be switched.
+	 * after the switch, we never come back
+	 * to this process anymore. */
+	while(1) __asm__ volatile("sti; hlt");
+	return code; // Never reached.
 }
 
 int _read(int fd, uint8_t* to, uint32_t count)
@@ -240,7 +230,7 @@ int _readdir(DIR *dirp, struct dirent *ret)
 
 int _wait(int *status)
 {
-	struct pnode const *pnode=find_process_from_process_tree((struct process*)current_process);
+	volatile struct pnode const *pnode=find_process_from_process_tree((struct process*)current_process);
 	if(!pnode->first_child) return -1;
 	int pid=pnode->first_child->process->pid;
 	current_process->state=waiting;

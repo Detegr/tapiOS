@@ -1,5 +1,6 @@
 #include "irq.h"
 #include <task/tss.h>
+#include <task/scheduler.h>
 #include <util/scancodes.h>
 #include <util/util.h>
 #include <task/process.h>
@@ -10,10 +11,9 @@ void timer_handler(void)
 {
 	if(!current_process) return;
 
-	struct process *new_process=(struct process*)current_process->next;
-	if(!new_process) new_process=(struct process*)process_list;
+	struct process *new_process=get_next_process();
 	struct process *old_process=(struct process*)current_process;
-	if(old_process == new_process) return;
+	if(!new_process || old_process == new_process) return;
 
 	current_process=new_process;
 	current_pdir=new_process->pdir;

@@ -12,10 +12,11 @@
 
 typedef enum process_state
 {
-	created,
-	waiting,
-	running,
-	blocked
+	created  = 0x1,
+	waiting  = 0x2,
+	running  = 0x4,
+	blocked  = 0x8,
+	finished = 0x10
 } process_state;
 
 struct process
