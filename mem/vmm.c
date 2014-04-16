@@ -1,7 +1,8 @@
 #include "pmm.h"
 #include "vmm.h"
-#include "heap.h"
+#include "liballoc.h"
 #include <terminal/vga.h>
+#include <task/process.h>
 
 #define PRESENT 0x1
 #define READWRITE 0x2
@@ -13,7 +14,7 @@ extern uint32_t kernel_end_addr;
 extern void _invalidate_page_table(unsigned ptbl);
 extern uint32_t _page_directory;
 static uint32_t* pdir=&_page_directory;
-static page_directory* kernel_pdir=0;
+static page_directory *kernel_pdir=0;
 
 static inline void flush_page_directory(void)
 {
@@ -68,7 +69,7 @@ page_directory* DEBUG_get_kernel_pdir(void)
 
 static bool page_table_exists(uint32_t pdi)
 {
-	return current_pdir->entries[pdi].flags & PRESENT;
+	return get_page_table_entry(1023, pdi) & PRESENT;
 }
 
 static void new_page_table(unsigned pdi, bool kernel, bool readwrite)
@@ -77,7 +78,7 @@ static void new_page_table(unsigned pdi, bool kernel, bool readwrite)
 	uint32_t flags=PRESENT;
 	if(!kernel) flags|=USERMODE;
 	if(readwrite) flags|=READWRITE;
-	current_pdir->entries[pdi].as_uint32=paddr|flags;
+	set_page_table_entry(1023, pdi, paddr|flags);
 	for(unsigned i=0; i<1024; i++)
 	{// Zero out the page table
 		set_page_table_entry(pdi, i, 0);
@@ -86,8 +87,8 @@ static void new_page_table(unsigned pdi, bool kernel, bool readwrite)
 
 static void clone_page_table(uint32_t i)
 {
-	uint32_t* src=(uint32_t*)0xFF400000;
-	uint32_t* to=(uint32_t*)0xFF800000;
+	uint32_t* src=(uint32_t*)0xFF400000; // 1021
+	uint32_t* to=(uint32_t*)0xFF800000; // 1022
 	for(int j=0; j<1024; ++j)
 	{
 		uint32_t pd_index=i * 0x400 + j;
@@ -117,17 +118,17 @@ static void clone_page_table(uint32_t i)
 
 page_directory *clone_page_directory_internal(page_directory *src, bool copy)
 {
-	page_directory* ret=kmalloc(sizeof(page_directory));
+	page_directory* ret=malloc(sizeof(page_directory));
 	memset(ret, 0, sizeof(page_directory));
 
-	physaddr_t src_pdir_paddr=get_page((vaddr_t)src);
+	physaddr_t src_pdir_paddr=get_page((vaddr_t)src) & 0xFFFFF000;
 	physaddr_t ret_pdir_paddr=get_page((vaddr_t)ret) & 0xFFFFF000;
 
-	if(!page_table_exists(1021)) new_page_table(1021, true, true);
-	if(!page_table_exists(1022)) new_page_table(1022, true, true);
+	physaddr_t tmp1021 = get_page_table_entry(1023, 1021);
+	physaddr_t tmp1022 = get_page_table_entry(1023, 1022);
 
-	current_pdir->entries[1021].as_uint32=src_pdir_paddr|PRESENT|READWRITE;
-	current_pdir->entries[1022].as_uint32=ret_pdir_paddr|PRESENT|READWRITE;
+	set_page_table_entry(1023, 1021, src_pdir_paddr|PRESENT|READWRITE);
+	set_page_table_entry(1023, 1022, ret_pdir_paddr|PRESENT|READWRITE);
 
 	for(int i=0; i<1021; ++i)
 	{
@@ -146,9 +147,9 @@ page_directory *clone_page_directory_internal(page_directory *src, bool copy)
 		}
 	}
 
-	current_pdir->entries[1021].as_uint32=0;
-	current_pdir->entries[1022].as_uint32=0;
-	ret->entries[1023].as_uint32=ret_pdir_paddr|PRESENT|USERMODE;
+	set_page_table_entry(1023, 1021, tmp1021);
+	set_page_table_entry(1023, 1022, tmp1022);
+	ret->entries[1023].as_uint32=ret_pdir_paddr|PRESENT;
 	return ret;
 }
 
@@ -167,10 +168,9 @@ void setup_vmm(void)
 	// Map the last page table to page directory itself
 	pdir[1023]=(((uint32_t)pdir) - 0xC0000000) & 0xFFFFF000;
 	pdir[1023] |= PRESENT|READWRITE;
-	invalidate_page((uint32_t)&PAGE_DIRECTORY[1023]);
+	flush_page_directory();
 
 	kernel_pdir=(page_directory*)pdir;
-	current_pdir=kernel_pdir;
 
 	// Remove identity mapping
 	for(int i=0; i<1024; ++i)
@@ -187,7 +187,13 @@ void setup_vmm(void)
 			kalloc_page_from(i - 0xC0000000, i, false, false);
 		}
 	}
-	change_pdir(clone_page_directory_from(kernel_pdir));
+	for(int i=769; i<1023; ++i)
+	{// Reserve page tables for kernel
+		new_page_table(i, true, true);
+	}
+
+	initial_pdir=clone_page_directory_from(kernel_pdir);
+	change_pdir(initial_pdir);
 	print_startup_info("VMM", true);
 }
 
@@ -236,10 +242,9 @@ void kfree_page(vaddr_t from)
 	set_page(from, 0);
 }
 
-void change_pdir(page_directory* pdir)
+void change_pdir(const page_directory* pdir)
 {
 	__asm__ volatile("mov eax, %0;"
 					 "mov cr3, eax;"
 					 :: "r"(get_page((vaddr_t)pdir) & 0xFFFFF000) : "eax");
-	current_pdir=pdir;
 }

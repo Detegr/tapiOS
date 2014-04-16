@@ -1,6 +1,6 @@
 #include "process.h"
 #include "tss.h"
-#include <mem/heap.h>
+#include <mem/liballoc.h>
 #include <util/util.h>
 #include <terminal/vga.h>
 #include "elf.h"
@@ -21,12 +21,12 @@ static void copy_open_resources(struct process *from, struct process *to)
 	}
 	if(from->files_open)
 	{
-		to->files_open=kmalloc(sizeof(struct open_files));
+		to->files_open=malloc(sizeof(struct open_files));
 		struct open_files *to_of=to->files_open;
 		struct open_files *of=from->files_open;
 		while((of=of->next))
 		{
-			to_of->next=kmalloc(sizeof(struct open_files));
+			to_of->next=malloc(sizeof(struct open_files));
 			memcpy(to_of->next, of, sizeof(struct open_files));
 			to_of=to_of->next;
 		}
@@ -69,13 +69,14 @@ int fork(void)
 	page_directory* pdir=clone_page_directory_from(current_process->pdir);
 
 	change_pdir(pdir);
-	struct process *child=kmalloc(sizeof(struct process));
+
+	struct process *child=malloc(sizeof(struct process));
 	memset(child, 0, sizeof(struct process));
 	child->state=created;
 	child->active=false;
 	child->pid=nextpid++;
 	child->pdir=pdir;
-	child->esp0=kmalloc(KERNEL_STACK_SIZE);
+	child->esp0=malloc(KERNEL_STACK_SIZE);
 	child->kesp=child->esp0 + KERNEL_STACK_SIZE;
 
 	/* Copy 20 bytes from parent kernel stack to child's kernel stack.
@@ -96,8 +97,8 @@ int fork(void)
 	p->next=child;
 
 	insert_process_to_process_tree(child, parent);
-
 	child->state=created;
+
 	change_pdir(current_process->pdir);
 
 	__asm__ volatile("sti;");

@@ -1,5 +1,5 @@
 #include "vfs.h"
-#include <mem/heap.h>
+#include <mem/liballoc.h>
 #include <util/util.h>
 #include <task/process.h>
 
@@ -15,8 +15,14 @@ static struct inode *walk_path(struct inode *node, const char* name)
 	{
 		do
 		{
-			if(!wnode) return NULL;
-			wnode=node->i_act->search(wnode, path);
+			if(!wnode)
+			{
+				free(wnode);
+				return NULL;
+			}
+			struct inode *nextnode=node->i_act->search(wnode, path);
+			free(wnode);
+			wnode = nextnode;
 		} while((path=strtok(NULL, '/')));
 		return wnode;
 	}
@@ -48,7 +54,7 @@ int32_t vfs_open(struct inode *node, struct file *ret)
 	struct open_files *of=current_process->files_open;
 	if(!current_process->files_open)
 	{
-		of=current_process->files_open=kmalloc(sizeof(struct open_files));
+		of=current_process->files_open=malloc(sizeof(struct open_files));
 		of->file=ret;
 		of->next=NULL;
 	}
@@ -56,7 +62,7 @@ int32_t vfs_open(struct inode *node, struct file *ret)
 	{
 		struct open_files *of=current_process->files_open;
 		while(of->next) of=of->next;
-		of->next=kmalloc(sizeof(struct open_files));
+		of->next=malloc(sizeof(struct open_files));
 		of=of->next;
 		of->file=ret;
 		of->next=NULL;

@@ -7,7 +7,7 @@
 #include <irq/pic.h>
 #include <mem/pmm.h>
 #include <mem/vmm.h>
-#include <mem/heap.h>
+#include <mem/liballoc.h>
 #include <task/process.h>
 #include <task/tss.h>
 #include <syscall/syscalls.h>
@@ -79,8 +79,10 @@ void kmain(struct multiboot* b, uint32_t magic)
 	{
 		struct file init;
 		vfs_open(node, &init);
-		uint8_t *init_mem=kmalloc(node->size);
+		uint8_t *init_mem=malloc(node->size);
+		//init_mem = (uint8_t*)((uint32_t)(init_mem + 0x1000) & 0xFFFFF000);
 		int read=vfs_read(&init, init_mem, node->size);
+		free(node);
 		vaddr_t entrypoint=init_elf_get_entry_point(init_mem);
 		setup_initial_process(entrypoint);
 	}

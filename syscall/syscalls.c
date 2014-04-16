@@ -5,7 +5,7 @@
 #include <irq/irq.h>
 #include <util/scancodes.h>
 #include <task/process.h>
-#include <mem/heap.h>
+#include <mem/liballoc.h>
 #include <fs/vfs.h>
 #include <task/processtree.h>
 #include <task/scheduler.h>
@@ -171,6 +171,10 @@ void* _sbrk(int32_t increment)
 	current_process->brk=newbrk;
 	return (void*)oldbrk;
 }
+inline void* sbrk(int32_t increment)
+{
+	return _sbrk(increment);
+}
 
 int _open(const char* path, int flags)
 {
@@ -180,7 +184,7 @@ int _open(const char* path, int flags)
 	struct inode *inode=vfs_search((struct inode*)root_fs, path);
 	if(inode)
 	{
-		struct file *f=kmalloc(sizeof(struct file)); // TODO: Free
+		struct file *f=malloc(sizeof(struct file)); // TODO: Free
 		if(vfs_open(inode, f) < 0) return -1;
 		return newfd(f);
 	}
@@ -200,9 +204,9 @@ struct DIR *_opendir(const char *dirpath)
 		}
 		else
 		{
-			struct file *f=kmalloc(sizeof(struct file)); // TODO: Free
+			struct file *f=malloc(sizeof(struct file)); // TODO: Free
 			if(vfs_open(inode, f) < 0) return NULL;
-			DIR *ret=kmalloc(sizeof(struct DIR));
+			DIR *ret=malloc(sizeof(struct DIR));
 			ret->dir_fd=newfd(f);
 			return ret;
 		}
@@ -260,7 +264,7 @@ int _exec(const char *path, char **const argv, char **const envp)
 	current_process->user_stack=setup_process_stack();
 
 	struct file *f=current_process->fds[fd];
-	uint8_t *prog=kmalloc(f->inode->size);
+	uint8_t *prog=malloc(f->inode->size);
 	uint32_t r=_read(fd, prog, f->inode->size);
 	if(!(r==f->inode->size || r==0)) PANIC();
 

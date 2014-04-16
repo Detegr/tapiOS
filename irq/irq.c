@@ -16,8 +16,7 @@ void timer_handler(void)
 	if(!new_process || old_process == new_process) return;
 
 	current_process=new_process;
-	current_pdir=new_process->pdir;
-	physaddr_t pageaddr=get_page((vaddr_t)current_pdir) & 0xFFFFF000;
+	physaddr_t pageaddr=get_page((vaddr_t)new_process->pdir) & 0xFFFFF000;
 	tss.esp0=((vaddr_t)current_process->esp0)+KERNEL_STACK_SIZE;
 
 	/* Handle EOI before switching the process */
@@ -68,6 +67,6 @@ void page_fault(int errno)
 {
 	vaddr_t addr;
 	__asm__ volatile("mov %0, cr2" : "=r"(addr));
-	kprintf("Page fault in %s mode when %s%s.\nTried to access %x\n", errno & 0x1 ? "user" : "kernel", errno & 0x2 ? "writing" : "reading", errno & 0x4 ? ", protection violation" : "", addr);
+	kprintf("Page fault in %s mode when %s%s.\nTried to access %x\n", errno & 0x1 ? "user" : "kernel", errno & 0x2 ? "writing" : "reading", errno & 0x4 ? ", protection violation" : ", page not present", addr);
 	PANIC();
 }

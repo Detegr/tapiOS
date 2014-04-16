@@ -32,7 +32,7 @@ typedef struct page_directory
 	page_directory_entry entries[1024];
 } page_directory;
 
-page_directory* current_pdir;
+const page_directory* initial_pdir;
 
 vptr_t* kalloc_page(vaddr_t to, bool kernel, bool readwrite);
 vptr_t* kalloc_page_from(physaddr_t from, vaddr_t to, bool kernel, bool readwrite);
@@ -45,7 +45,7 @@ page_directory* new_page_directory_from(page_directory* src);
 void set_page_table_entry(uint16_t pdi, uint32_t pti, uint32_t flags);
 void set_page(vaddr_t addr, uint32_t flags);
 uint32_t get_page(vaddr_t addr);
-void change_pdir(page_directory* pdir);
+void change_pdir(const page_directory* pdir);
 uint32_t vaddr_to_physaddr(vaddr_t vaddr);
 
 #endif
