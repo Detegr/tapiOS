@@ -2,7 +2,7 @@
 #include "process.h"
 #include <mem/vmm.h>
 #include <mem/pmm.h>
-#include <mem/liballoc.h>
+#include <mem/kmalloc.h>
 #include <terminal/vga.h>
 #include <util/util.h>
 #include <task/tss.h>
@@ -13,7 +13,7 @@ static uint32_t* stack_end_ptr=&stack;
 
 void setup_tasking(void)
 {
-	process_list=malloc(sizeof(struct process));
+	process_list=kmalloc(sizeof(struct process));
 	current_process=process_list;
 	memset((struct process*)current_process, 0, sizeof(struct process));
 
@@ -31,6 +31,14 @@ vptr_t *setup_process_stack(void)
 	return stack;
 }
 
+void free_process_stack(vptr_t *stack)
+{
+	for(uint32_t i=0xB0000000; i<=0xB0004000; i+=0x1000)
+	{
+		kfree_page(i);
+	}
+}
+
 void setup_initial_process(vaddr_t entry_point)
 {
 	vptr_t *stack=setup_process_stack();
@@ -39,11 +47,12 @@ void setup_initial_process(vaddr_t entry_point)
 	__asm__ volatile("cli");
 	current_process->user_stack=stack;
 	current_process->pdir=(page_directory*)initial_pdir;
-	current_process->esp0=malloc(KERNEL_STACK_SIZE);
+	current_process->esp0=kmalloc(KERNEL_STACK_SIZE);
 	current_process->pid=1;
 	current_process->kesp=current_process->esp0+KERNEL_STACK_SIZE;
 	current_process->state=running;
 	current_process->active=true;
+	current_process->files_open=NULL;
 	memset(current_process->esp0, 0, KERNEL_STACK_SIZE);
 	tss.esp0=(uint32_t)current_process->kesp;
 

@@ -1,6 +1,6 @@
 #include "process.h"
 #include "tss.h"
-#include <mem/liballoc.h>
+#include <mem/kmalloc.h>
 #include <util/util.h>
 #include <terminal/vga.h>
 #include "elf.h"
@@ -21,12 +21,12 @@ static void copy_open_resources(struct process *from, struct process *to)
 	}
 	if(from->files_open)
 	{
-		to->files_open=malloc(sizeof(struct open_files));
+		to->files_open=kmalloc(sizeof(struct open_files));
 		struct open_files *to_of=to->files_open;
 		struct open_files *of=from->files_open;
 		while((of=of->next))
 		{
-			to_of->next=malloc(sizeof(struct open_files));
+			to_of->next=kmalloc(sizeof(struct open_files));
 			memcpy(to_of->next, of, sizeof(struct open_files));
 			to_of=to_of->next;
 		}
@@ -70,13 +70,13 @@ int fork(void)
 
 	change_pdir(pdir);
 
-	struct process *child=malloc(sizeof(struct process));
+	struct process *child=kmalloc(sizeof(struct process));
 	memset(child, 0, sizeof(struct process));
 	child->state=created;
 	child->active=false;
 	child->pid=nextpid++;
 	child->pdir=pdir;
-	child->esp0=malloc(KERNEL_STACK_SIZE);
+	child->esp0=kmalloc(KERNEL_STACK_SIZE);
 	child->kesp=child->esp0 + KERNEL_STACK_SIZE;
 
 	/* Copy 20 bytes from parent kernel stack to child's kernel stack.
@@ -207,5 +207,6 @@ vaddr_t init_elf_get_entry_point(uint8_t* elf)
 	current_process->brk=((programs[0].p_vaddr + programs[0].p_filesz) + 0x1000) & 0xFFFFF000;
 	kalloc_page(current_process->brk, false, true);
 
+	current_process->program=elf;
 	return header.entry;
 }

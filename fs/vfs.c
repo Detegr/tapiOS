@@ -1,7 +1,8 @@
 #include "vfs.h"
-#include <mem/liballoc.h>
+#include <mem/kmalloc.h>
 #include <util/util.h>
 #include <task/process.h>
+#include <terminal/vga.h>
 
 static struct inode *walk_path(struct inode *node, const char* name)
 {
@@ -15,13 +16,9 @@ static struct inode *walk_path(struct inode *node, const char* name)
 	{
 		do
 		{
-			if(!wnode)
-			{
-				free(wnode);
-				return NULL;
-			}
+			if(!wnode) return NULL;
 			struct inode *nextnode=node->i_act->search(wnode, path);
-			free(wnode);
+			if(wnode!=root_fs) kfree(wnode);
 			wnode = nextnode;
 		} while((path=strtok(NULL, '/')));
 		return wnode;
@@ -52,9 +49,9 @@ int32_t vfs_open(struct inode *node, struct file *ret)
 	if(!current_process) return retval;
 
 	struct open_files *of=current_process->files_open;
-	if(!current_process->files_open)
+	if(!of)
 	{
-		of=current_process->files_open=malloc(sizeof(struct open_files));
+		of=current_process->files_open=kmalloc(sizeof(struct open_files));
 		of->file=ret;
 		of->next=NULL;
 	}
@@ -62,7 +59,8 @@ int32_t vfs_open(struct inode *node, struct file *ret)
 	{
 		struct open_files *of=current_process->files_open;
 		while(of->next) of=of->next;
-		of->next=malloc(sizeof(struct open_files));
+		of->next=kmalloc(sizeof(struct open_files));
+		of->next->next=NULL;
 		of=of->next;
 		of->file=ret;
 		of->next=NULL;

@@ -41,6 +41,8 @@ struct process
 
 	struct open_files *files_open;
 	struct file *fds[FD_MAX];
+
+	vptr_t *program;
 };
 
 #ifndef SHARED_PROCESS_VARIABLES

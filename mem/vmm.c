@@ -1,6 +1,6 @@
 #include "pmm.h"
 #include "vmm.h"
-#include "liballoc.h"
+#include "kmalloc.h"
 #include <terminal/vga.h>
 #include <task/process.h>
 
@@ -118,7 +118,7 @@ static void clone_page_table(uint32_t i)
 
 page_directory *clone_page_directory_internal(page_directory *src, bool copy)
 {
-	page_directory* ret=malloc(sizeof(page_directory));
+	page_directory* ret=kmalloc(sizeof(page_directory));
 	memset(ret, 0, sizeof(page_directory));
 
 	physaddr_t src_pdir_paddr=get_page((vaddr_t)src) & 0xFFFFF000;

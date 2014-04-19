@@ -20,4 +20,6 @@ struct registers
 	uint32_t eax;
 };
 
+void* sbrk(int32_t increment);
+
 #endif

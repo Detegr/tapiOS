@@ -5,7 +5,7 @@
 #include <irq/irq.h>
 #include <util/scancodes.h>
 #include <task/process.h>
-#include <mem/liballoc.h>
+#include <mem/kmalloc.h>
 #include <fs/vfs.h>
 #include <task/processtree.h>
 #include <task/scheduler.h>
@@ -32,12 +32,30 @@ syscall_ptr syscalls[]={
 
 int _exit(int code)
 {
+	/*
+	struct open_files *o=current_process->files_open;
+	while(o)
+	{
+		if(o->file) kfree(o->file);
+		if(o->next)
+		{
+			struct open_files *this=o;
+			o=o->next;
+			kfree(this);
+		}
+	}
+	*/
+	kfree(current_process->program);
+	kfree(current_process->pdir);
+	kfree(current_process->esp0);
+
 	current_process->state=finished;
 	reap_finished_processes();
 
 	/* Wait for the process to be switched.
 	 * after the switch, we never come back
 	 * to this process anymore. */
+
 	while(1) __asm__ volatile("sti; hlt");
 	return code; // Never reached.
 }
@@ -184,7 +202,7 @@ int _open(const char* path, int flags)
 	struct inode *inode=vfs_search((struct inode*)root_fs, path);
 	if(inode)
 	{
-		struct file *f=malloc(sizeof(struct file)); // TODO: Free
+		struct file *f=kmalloc(sizeof(struct file)); // TODO: Free
 		if(vfs_open(inode, f) < 0) return -1;
 		return newfd(f);
 	}
@@ -204,9 +222,9 @@ struct DIR *_opendir(const char *dirpath)
 		}
 		else
 		{
-			struct file *f=malloc(sizeof(struct file)); // TODO: Free
+			struct file *f=kmalloc(sizeof(struct file)); // TODO: Free
 			if(vfs_open(inode, f) < 0) return NULL;
-			DIR *ret=malloc(sizeof(struct DIR));
+			DIR *ret=kmalloc(sizeof(struct DIR));
 			ret->dir_fd=newfd(f);
 			return ret;
 		}
@@ -258,13 +276,13 @@ int _exec(const char *path, char **const argv, char **const envp)
 	page_directory *old_pdir=current_process->pdir;
 	page_directory *pdir=new_page_directory_from(old_pdir);
 
-	// TODO: Free old pdir and old stack
+	// Old process stack is in old_pdir and will be freed later on
 	change_pdir(pdir);
 	current_process->pdir=pdir;
 	current_process->user_stack=setup_process_stack();
 
 	struct file *f=current_process->fds[fd];
-	uint8_t *prog=malloc(f->inode->size);
+	uint8_t *prog=kmalloc(f->inode->size);
 	uint32_t r=_read(fd, prog, f->inode->size);
 	if(!(r==f->inode->size || r==0)) PANIC();
 
@@ -286,6 +304,8 @@ int _exec(const char *path, char **const argv, char **const envp)
 
 		memcpy(argv_copy[i], str, len);
 	}
+	kfree(old_pdir);
+
 	argv_copy[argc]=NULL;
 	current_process->brk+=0x1000;
 	kalloc_page(current_process->brk, false, true);

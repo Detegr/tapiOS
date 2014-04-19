@@ -3,7 +3,7 @@
 #include <util/util.h>
 #include <mem/pmm.h>
 #include <mem/vmm.h>
-#include <mem/liballoc.h>
+#include <mem/kmalloc.h>
 #include <stdbool.h>
 
 #define SUPERBLOCK_SIZE 1024
@@ -159,7 +159,7 @@ struct inode *ext2_search(struct inode *node, const char *name)
 			if(memcmp(&dir->name, name, dir->name_length_low) == 0)
 			{
 				ext2_inode *retinode=read_inode(node->superblock, dir->inode);
-				struct inode *ret=malloc(sizeof(struct inode)); // TODO: Free
+				struct inode *ret=kmalloc(sizeof(struct inode)); // TODO: Free
 				memcpy(ret->name, &dir->name, dir->name_length_low);
 				ret->inode_no=dir->inode;
 				ret->flags=retinode->type_and_permissions;
@@ -277,7 +277,7 @@ struct inode *ext2_fs_init(uint8_t *fs_data)
 		print_startup_info("ext2", false);
 		return NULL;
 	}
-	struct inode *ret=malloc(sizeof(struct inode));
+	struct inode *ret=kmalloc(sizeof(struct inode));
 	//int blockgroup_count=((sb->blocks+(sb->blocks_in_blockgroup-1))/sb->blocks_in_blockgroup);
 	ext2_inode* inode=read_inode(sb, 2); // inode 2 is always the root node
 	ext2_directory* d=get_block(sb, inode->blocks[0]);
@@ -286,8 +286,8 @@ struct inode *ext2_fs_init(uint8_t *fs_data)
 	ret->flags=inode->type_and_permissions;
 	ret->size=inode->size_low;
 	ret->superblock=sb;
-	ret->i_act=malloc(sizeof(struct inode_actions));
-	ret->f_act=malloc(sizeof(struct file_actions));
+	ret->i_act=kmalloc(sizeof(struct inode_actions));
+	ret->f_act=kmalloc(sizeof(struct file_actions));
 	kprintf("%x\n%x\n%x\n", ret, ret->i_act, ret->f_act);
 	ret->i_act->search=&ext2_search;
 	ret->i_act->readdir=&ext2_readdir;

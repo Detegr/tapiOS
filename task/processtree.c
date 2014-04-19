@@ -1,13 +1,13 @@
 #include "processtree.h"
 #include "process.h"
-#include <mem/liballoc.h>
+#include <mem/kmalloc.h>
 #include <util/util.h>
 #include <terminal/vga.h>
 
 void setup_process_tree(void)
 {
 	// Assumes that current_process is valid
-	process_tree=malloc(sizeof(struct pnode));
+	process_tree=kmalloc(sizeof(struct pnode));
 	struct pnode *root=(struct pnode*)process_tree;
 	root->process = (struct process*)current_process;
 	root->first_child=NULL;
@@ -51,7 +51,7 @@ int insert_process_to_process_tree(struct process *p, struct process *parent)
 	struct pnode *node=parentnode->first_child;
 	if(!node)
 	{
-		node=malloc(sizeof(struct pnode));
+		node=kmalloc(sizeof(struct pnode));
 		node->process=p;
 		node->parent=(struct pnode*)parentnode;
 		node->first_child=NULL;
@@ -61,7 +61,7 @@ int insert_process_to_process_tree(struct process *p, struct process *parent)
 		return 0;
 	}
 	while(node->next) node=node->next;
-	node->next=malloc(sizeof(struct pnode));
+	node->next=kmalloc(sizeof(struct pnode));
 	node->next->parent=parentnode;
 	node->next->process=p;
 	node->next->first_child=NULL;

@@ -3,8 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-
-#define NULL (void*)0x0
+#include <stddef.h>
 
 #define PANIC() panic(__FILE__,__LINE__)
 
@@ -13,7 +12,8 @@
 #define USER_CODE_SEGMENT 0x18
 #define USER_DATA_SEGMENT 0x20
 
-typedef uint32_t size_t;
+#define ENOMEM 12
+#define EINVAL 22
 
 uint8_t inb(uint16_t port);
 
