@@ -48,6 +48,7 @@ int32_t vfs_open(struct inode *node, struct file *ret)
 	else return -1;
 	if(!current_process) return retval;
 
+	/*
 	struct open_files *of=current_process->files_open;
 	if(!of)
 	{
@@ -65,6 +66,7 @@ int32_t vfs_open(struct inode *node, struct file *ret)
 		of->file=ret;
 		of->next=NULL;
 	}
+	*/
 	return retval;
 }
 

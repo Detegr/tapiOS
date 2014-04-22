@@ -18,6 +18,7 @@ struct inode
 
 struct file
 {
+	uint32_t refcount;
 	struct inode *inode;
 	uint32_t pos;
 };

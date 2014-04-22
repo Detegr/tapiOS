@@ -19,6 +19,7 @@ static void copy_open_resources(struct process *from, struct process *to)
 	{
 		to->fds[i]=from->fds[i];
 	}
+	/*
 	if(from->files_open)
 	{
 		to->files_open=kmalloc(sizeof(struct open_files));
@@ -31,6 +32,7 @@ static void copy_open_resources(struct process *from, struct process *to)
 			to_of=to_of->next;
 		}
 	}
+	*/
 }
 
 vptr_t *setup_child_stack(vptr_t *stack_top_ptr)
@@ -90,7 +92,7 @@ int fork(void)
 	memset(child->stdoutbuf, 0, 256);
 	memset(child->keybuf, 0, 256);
 
-	copy_open_resources(parent, child);
+	//copy_open_resources(parent, child);
 
 	struct process* p=(struct process*)process_list;
 	while(p->next) p=p->next;
@@ -130,6 +132,7 @@ int newfd(struct file *f)
 		if(current_process->fds[i] == NULL)
 		{
 			current_process->fds[i]=f;
+			f->refcount++;
 			return i;
 		}
 	}

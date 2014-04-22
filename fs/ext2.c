@@ -189,7 +189,8 @@ static int read_block(ext2_superblock *sb, struct file *f, uint8_t *block, uint8
 	 */
 	uint32_t pos=f?f->pos:0;
 	uint32_t ret=0;
-	for(uint32_t i=0; i<BLOCKSIZE(sb); ++i, ++ret)
+	uint32_t blocksize = BLOCKSIZE(sb);
+	for(uint32_t i=0; i<blocksize; ++i, ++ret)
 	{
 		if(pos == count) break;
 		else if(f && pos >= f->inode->size)
@@ -206,38 +207,32 @@ static int read_block(ext2_superblock *sb, struct file *f, uint8_t *block, uint8
 static int read_indirect_block(ext2_superblock *sb, struct file *f, uint32_t *blocks, uint8_t *to, uint32_t count)
 {
 	uint32_t ret=0;
-	for(int i=0; i<256; ++i)
+	uint32_t blockcount = BLOCKSIZE(sb) >> 2; // Blocksize / sizeof(char*)
+	for(uint32_t i=0; i<blockcount; ++i)
 	{
-		if(blocks[i])
-		{
-			int read=read_block(sb, f, get_block(sb, blocks[i]), to, count);
-			if(read>0) ret+=read;
-			else ret=0;
-		}
+		ret += read_block(sb, f, get_block(sb, blocks[i]), to, count);
 	}
 	return ret;
 }
 
 static int read_blocks(ext2_superblock *sb, struct file *f, uint8_t *to, uint32_t *blocks, uint32_t count)
 {
-	int32_t ret=0;
 	for(int b=0; b<=FINAL_DIRECT_BLOCK; ++b)
 	{
-		if(!blocks[b]) break;
-		uint8_t* p=get_block(sb, blocks[b]);
 		read_block(sb, f, get_block(sb, blocks[b]), to, count);
 	}
 	if(blocks[SINGLY_INDIRECT_BLOCK])
 	{
-		read_indirect_block(sb, f, (uint32_t*)get_block(sb, blocks[SINGLY_INDIRECT_BLOCK]), &to[ret], count);
+		read_indirect_block(sb, f, get_block(sb, blocks[SINGLY_INDIRECT_BLOCK]), to, count);
 	}
 	if(blocks[DOUBLY_INDIRECT_BLOCK])
 	{
-		uint8_t doubly_indirect_block[BLOCKSIZE(sb)*sizeof(uint32_t)];
-		read_block(sb, NULL, get_block(sb, blocks[DOUBLY_INDIRECT_BLOCK]), doubly_indirect_block, BLOCKSIZE(sb));
+		uint32_t doubly_indirect_block[BLOCKSIZE(sb)];
+		memset(doubly_indirect_block, 0, BLOCKSIZE(sb) * sizeof(uint32_t));
+		read_block(sb, NULL, get_block(sb, blocks[DOUBLY_INDIRECT_BLOCK]), (uint8_t*)doubly_indirect_block, BLOCKSIZE(sb));
 		for(uint32_t i=0; i<BLOCKSIZE(sb); ++i)
 		{
-			read_indirect_block(sb, f, (uint32_t*)get_block(sb, doubly_indirect_block[i]), &to[ret], count);
+			read_indirect_block(sb, f, get_block(sb, doubly_indirect_block[i]), to, count);
 		}
 	}
 	if(blocks[TRIPLY_INDIRECT_BLOCK])
@@ -250,7 +245,7 @@ static int read_blocks(ext2_superblock *sb, struct file *f, uint8_t *to, uint32_
 			read_block(sb, NULL, get_block(sb, doubly_indirect_block[i]), triply_indirect_block, BLOCKSIZE(sb));
 			for(uint32_t j=0; j<BLOCKSIZE(sb); ++j)
 			{
-				read_indirect_block(sb, f, (uint32_t*)get_block(sb, triply_indirect_block[j]), &to[ret], count);
+				read_indirect_block(sb, f, get_block(sb, triply_indirect_block[j]), to, count);
 			}
 		}
 	}
@@ -288,7 +283,6 @@ struct inode *ext2_fs_init(uint8_t *fs_data)
 	ret->superblock=sb;
 	ret->i_act=kmalloc(sizeof(struct inode_actions));
 	ret->f_act=kmalloc(sizeof(struct file_actions));
-	kprintf("%x\n%x\n%x\n", ret, ret->i_act, ret->f_act);
 	ret->i_act->search=&ext2_search;
 	ret->i_act->readdir=&ext2_readdir;
 	ret->f_act->open=&ext2_open;

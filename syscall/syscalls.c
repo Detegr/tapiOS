@@ -19,6 +19,7 @@ int _read(int fd, uint8_t* to, uint32_t size);
 void* _sbrk(int32_t increment);
 int _open(const char* path, int flags);
 struct DIR *_opendir(const char *dirpath);
+int _closedir(DIR *dirp);
 int _readdir(DIR *dirp, struct dirent *ret);
 int _wait(int *status);
 int _exec(const char *path, char **const argv, char **const envp);
@@ -27,7 +28,7 @@ typedef int(*syscall_ptr)();
 syscall_ptr syscalls[]={
 	&_exit, &_write, &_read, (syscall_ptr)&_sbrk,
 	&_open, (syscall_ptr)&_opendir, &_readdir,
-	&fork, &_wait, &_exec
+	&fork, &_wait, &_exec, &_closedir, &getpid
 };
 
 int _exit(int code)
@@ -222,7 +223,7 @@ struct DIR *_opendir(const char *dirpath)
 		}
 		else
 		{
-			struct file *f=kmalloc(sizeof(struct file)); // TODO: Free
+			struct file *f=kmalloc(sizeof(struct file));
 			if(vfs_open(inode, f) < 0) return NULL;
 			DIR *ret=kmalloc(sizeof(struct DIR));
 			ret->dir_fd=newfd(f);
@@ -234,6 +235,14 @@ struct DIR *_opendir(const char *dirpath)
 		//errno=ENOENT;
 		return NULL;
 	}
+}
+
+int _closedir(DIR *dirp)
+{
+	struct file *f=current_process->fds[dirp->dir_fd];
+	if(--f->refcount == 0) kfree(f);
+	kfree(dirp);
+	return 0;
 }
 
 int _readdir(DIR *dirp, struct dirent *ret)
@@ -283,8 +292,13 @@ int _exec(const char *path, char **const argv, char **const envp)
 
 	struct file *f=current_process->fds[fd];
 	uint8_t *prog=kmalloc(f->inode->size);
+	uint32_t total=0;
 	uint32_t r=_read(fd, prog, f->inode->size);
-	if(!(r==f->inode->size || r==0)) PANIC();
+	if(r != 0 && r < f->inode->size)
+	{
+		kprintf("Read %d, expected %d\n", r, f->inode->size);
+		PANIC();
+	}
 
 	vaddr_t entry=init_elf_get_entry_point(prog);
 

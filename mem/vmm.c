@@ -179,6 +179,11 @@ void setup_vmm(void)
 	}
 	pdir[0]=0;
 
+	for(int i=769; i<1023; ++i)
+	{// Reserve page tables for kernel
+		new_page_table(i, true, true);
+	}
+
 	// Map the possible ramfs to 0xC0000000
 	for(uint32_t i=0xC0000000; i<kernel_end_addr + 0xC0000000; i+=0x1000)
 	{
@@ -186,10 +191,6 @@ void setup_vmm(void)
 		{
 			kalloc_page_from(i - 0xC0000000, i, false, false);
 		}
-	}
-	for(int i=769; i<1023; ++i)
-	{// Reserve page tables for kernel
-		new_page_table(i, true, true);
 	}
 
 	initial_pdir=clone_page_directory_from(kernel_pdir);

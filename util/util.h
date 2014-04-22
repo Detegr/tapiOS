@@ -31,4 +31,6 @@ int strlen(const char* str);
 char *strtok(char *str, const char delim);
 extern uint32_t _get_eip(void);
 
+int errno;
+
 #endif
