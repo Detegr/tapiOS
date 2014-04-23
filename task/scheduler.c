@@ -9,7 +9,7 @@ struct process *get_next_process(void)
 	struct process *cur=(struct process*)current_process;
 	if(!cur->next) return (struct process*)process_list;
 	ret=cur->next;
-	while(ret && (ret->state & (waiting|finished))) ret=ret->next;
+	while(ret && (ret->state & finished)) ret=ret->next;
 	if(!ret) return (struct process*)process_list;
 	return ret;
 }
