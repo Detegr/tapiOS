@@ -7,6 +7,18 @@ char char_for_scancode(uint8_t scancode)
 	char ret=0;
 	switch(scancode)
 	{ // Scan code set 1
+		case 0x02: return shift ? '!' : '1';
+		case 0x03: return shift ? '@' : '2';
+		case 0x04: return shift ? '#' : '3';
+		case 0x05: return shift ? '$' : '4';
+		case 0x06: return shift ? '%' : '5';
+		case 0x07: return shift ? '^' : '6';
+		case 0x08: return shift ? '&' : '7';
+		case 0x09: return shift ? '*' : '8';
+		case 0x0A: return shift ? '(' : '9';
+		case 0x0B: return shift ? ')' : '0';
+		case 0x0C: ret='-'; break;
+		case 0x0D: ret='='; break;
 		case 0x1E: ret='a'; break;
 		case 0x30: ret='b'; break;
 		case 0x2E: ret='c'; break;
@@ -19,6 +31,8 @@ char char_for_scancode(uint8_t scancode)
 		case 0x24: ret='j'; break;
 		case 0x25: ret='k'; break;
 		case 0x26: ret='l'; break;
+		case 0x28: return shift ? '"' : '\'';
+		case 0x2B: return shift ? '|' : '\\';
 		case 0x32: ret='m'; break;
 		case 0x31: ret='n'; break;
 		case 0x18: ret='o'; break;
@@ -39,6 +53,7 @@ char char_for_scancode(uint8_t scancode)
 		case 0x35: return '/';
 		case 0x39: return ' ';
 		case 0x1C: return '\n';
+		case 0x8C:
 		case 0x9E:
 		case 0xB0:
 		case 0xAE:
@@ -70,6 +85,8 @@ char char_for_scancode(uint8_t scancode)
 		case 0xB4:
 		case 0xB9:
 		case 0x9C:
+		case 0xA8:
+		case 0xAB:
 			return CHAR_UP;
 		// Has a bug with both shifts down at the same time, but who cares :)
 		case 0x36: case 0x2A: shift=true; return CHAR_UP;
