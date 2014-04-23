@@ -21,14 +21,14 @@ int _open(const char* path, int flags);
 struct DIR *_opendir(const char *dirpath);
 int _closedir(DIR *dirp);
 int _readdir(DIR *dirp, struct dirent *ret);
-int _wait(int *status);
+pid_t _waitpid(pid_t pid, int *status, int options);
 int _exec(const char *path, char **const argv, char **const envp);
 
 typedef int(*syscall_ptr)();
 syscall_ptr syscalls[]={
 	&_exit, &_write, &_read, (syscall_ptr)&_sbrk,
 	&_open, (syscall_ptr)&_opendir, &_readdir,
-	&fork, &_wait, &_exec, &_closedir, &getpid
+	&fork, &_waitpid, &_exec, &_closedir, &getpid
 };
 
 int _exit(int code)
@@ -106,7 +106,7 @@ int _read(int fd, uint8_t* to, uint32_t count)
 	{
 		prevkp=p->keyp;
 		__asm__ volatile("sti;hlt");
-		if(p->keyp==0) continue;
+		if(p->keyp-prevkp == 0) continue;
 		for(int i=prevkp; i<=p->keyp; ++i)
 		{
 			char c=char_for_scancode(p->keybuf[i]);
@@ -259,15 +259,32 @@ int _readdir(DIR *dirp, struct dirent *ret)
 	}
 }
 
-int _wait(int *status)
+pid_t _waitpid(pid_t pid, int *status, int options)
 {
-	volatile struct pnode const *pnode=find_process_from_process_tree((struct process*)current_process);
-	if(!pnode->first_child) return -1;
-	int pid=pnode->first_child->process->pid;
-	current_process->state=waiting;
-	while(pnode->first_child) __asm__("sti;hlt");
-	current_process->state=running;
-	return pid;
+	if(pid < -1) return -1; /* gid == -pid, NYI */
+	if(pid == 0) return -1; /* gid == pid, NYI */
+
+	if(pid == -1)
+	{//Wait for any child process
+		volatile struct pnode const *pnode=find_process_from_process_tree((struct process*)current_process);
+		if(!pnode->first_child) return -1;
+
+		pid_t ret=pnode->first_child->process->pid;
+		current_process->state=waiting;
+		while(pnode->first_child) __asm__("sti;hlt");
+		current_process->state=running;
+		return ret;
+	}
+	if(pid > 0)
+	{//Wait for child with process id 'pid'
+		volatile struct pnode const *pnode=find_process_by_pid(pid);
+		if(!pnode) return -1;
+		current_process->state=waiting;
+		while(pnode) __asm__("sti;hlt");
+		current_process->state=running;
+		return pid;
+	}
+	return -1;
 }
 
 int _exec(const char *path, char **const argv, char **const envp)

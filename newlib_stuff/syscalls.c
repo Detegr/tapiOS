@@ -17,7 +17,7 @@
 #define OPENDIR 6
 #define READDIR 7
 #define FORK 8
-#define WAIT 9
+#define WAITPID 9
 #define EXEC 10
 #define CLOSEDIR 11
 #define GETPID 12
@@ -129,15 +129,14 @@ int fork(void)
 	SYSCALL0(FORK);
 }
 
-int wait(int *status)
+pid_t wait(int *status)
 {
-	SYSCALL1(WAIT, status);
+	SYSCALL3(WAITPID, -1, status, 0);
 }
 
 pid_t wait3(int *status, int options, struct rusage *rusage)
 {
-	errno=ECHILD;
-	return -1;
+	SYSCALL3(WAITPID, -1, status, options);
 }
 
 int execve(const char *path, char **const argv, char **const envp)
@@ -172,7 +171,7 @@ int fcntl(int fd, int cmd, ...)
 
 uid_t geteuid(void)
 {
-	return -1;
+	return 0;
 }
 
 gid_t getgid(void)
@@ -228,7 +227,7 @@ int setpgid(pid_t pid, pid_t pgid)
 
 uid_t getuid(void)
 {
-	return -1;
+	return 0;
 }
 
 int getgroups(size_t gidsetsize, const gid_t *list)
