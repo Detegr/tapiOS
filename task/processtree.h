@@ -1,6 +1,8 @@
 #ifndef _TAPIOS_PROCESSTREE_H_
 #define _TAPIOS_PROCESSTREE_H_
 
+#include <util/util.h>
+
 struct pnode
 {
 	struct process *process;
@@ -16,5 +18,6 @@ void setup_process_tree(void);
 int insert_process_to_process_tree(struct process *p, struct process *parent);
 struct pnode *find_process_from_process_tree(const struct process *p);
 int delete_process_from_process_tree(const struct process *p);
+struct pnode *find_process_by_pid(pid_t pid);
 
 #endif

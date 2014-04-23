@@ -44,6 +44,31 @@ struct pnode* find_process_from_process_tree(const struct process *p)
 	return NULL;
 }
 
+static struct pnode *find_pid_from_children(const struct pnode *needle, pid_t pid)
+{
+	struct pnode *node=needle->first_child;
+	while(node)
+	{
+		if(node->process->pid==pid) return node;
+		else node=node->next;
+	}
+	return NULL;
+}
+
+struct pnode *find_process_by_pid(pid_t pid)
+{
+	struct pnode *root=(struct pnode*)process_tree;
+	struct pnode *node=root;
+	if(node->process->pid == pid) return node;
+	while(node)
+	{
+		struct pnode *result=find_pid_from_children(node, pid);
+		if(result) return result;
+		else node=node->first_child;
+	}
+	return NULL;
+}
+
 int insert_process_to_process_tree(struct process *p, struct process *parent)
 {
 	struct pnode *parentnode=find_process_from_process_tree(parent);
