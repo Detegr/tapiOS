@@ -42,10 +42,7 @@ vptr_t *setup_child_stack(vptr_t *stack_top_ptr)
 	/* These are for _return_to_userspace function
 	 * that does popping the segment registers and
 	 * popa for general purpose registers. */
-	for(int i=0; i<8; ++i)
-	{// Initial register values
-		PUSH(0);
-	}
+
 	for(int i=0; i<4; ++i)
 	{// ds,es,fs,gs to user mode DS
 		PUSH(0x23);
@@ -81,18 +78,31 @@ int fork(void)
 	child->esp0=kmalloc(KERNEL_STACK_SIZE);
 	child->kesp=child->esp0 + KERNEL_STACK_SIZE;
 
-	/* Copy 20 bytes from parent kernel stack to child's kernel stack.
-	 * These 20 bytes contain ss, esp, eflags, cs and eip.
-	 * We need these to return from the syscall in the child process. */
-	memcpy(child->kesp-20, parent->esp0 + KERNEL_STACK_SIZE - 20, 20);
-	child->kesp=setup_child_stack(child->kesp-20);
+	/* Copy register values from the parent,
+	 * return 0 in eax for the child. */
+	struct regs *pregs = (struct regs*)(parent->esp0 + KERNEL_STACK_SIZE - sizeof(struct regs));
+	struct regs *cregs = (struct regs*)(child->kesp - sizeof(struct regs));
+	cregs->edi    = pregs->edi;
+	cregs->esi    = pregs->esi;
+	cregs->ebp    = pregs->ebp;
+	cregs->ebx    = pregs->ebx;
+	cregs->edx    = pregs->edx;
+	cregs->ecx    = pregs->ecx;
+	cregs->eax    = 0;
+	cregs->eip    = pregs->eip;
+	cregs->cs     = pregs->cs;
+	cregs->eflags = pregs->eflags;
+	cregs->esp    = pregs->esp;
+	cregs->ss     = pregs->ss;
+
+	child->kesp=setup_child_stack((vptr_t*)cregs);
 	child->brk=parent->brk;
 	child->user_stack=parent->user_stack;
 
 	memset(child->stdoutbuf, 0, 256);
 	memset(child->keybuf, 0, 256);
 
-	//copy_open_resources(parent, child);
+	copy_open_resources(parent, child);
 
 	struct process* p=(struct process*)process_list;
 	while(p->next) p=p->next;

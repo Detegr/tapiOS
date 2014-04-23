@@ -3,7 +3,7 @@
 	extern %2
 	%1:
 	cli
-	pusha
+	pushad
 	push ds
 	push es
 	push fs
@@ -44,7 +44,7 @@ global _syscall
 extern syscall
 _syscall:
 	cli
-	pusha
+	pushad
 	push ds
 	push es
 	push fs
@@ -60,7 +60,7 @@ _syscall:
 	pop fs
 	pop es
 	pop ds
-	popa
+	popad
 	iret
 
 send_eoi:
