@@ -3,7 +3,7 @@
 
 int main(int argc, char **argv)
 {
-	if(argc<2) return -1;
+	if(argc<1) return -1;
 	DIR *d=opendir(argv[1] ? argv[1] : "/");
 	struct dirent *dep;
 	while((dep=readdir(d)))
