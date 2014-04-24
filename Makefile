@@ -1,7 +1,7 @@
 OBJECTS=boot/loader.o boot/paging_asm.o util/util_asm.o terminal/vga.o irq/gdt.o irq/idt.o irq/pic.o irq/irq_asm.o irq/irq.o util/util.o mem/kmalloc.o mem/pmm.o mem/vmm.o kmain.o util/scancodes.o task/process.o task/multitasking.o irq/timer.o syscall/syscalls.o fs/vfs.o fs/ext2.o task/processtree.o task/scheduler.o
-CFLAGS=-Wall -Wextra -Werror -nostdlib -Wno-unused-parameter -m32 -ffreestanding -g3 -std=c99 -Wno-unused-variable -masm=intel -Wno-unused-function -Wno-unused-but-set-parameter -I. -Wno-address -Wno-sign-compare
+CFLAGS=-Wall -Wextra -Werror -nostdlib -Wno-unused-parameter -m32 -ffreestanding -g3 -std=c99 -Wno-unused-variable -masm=intel -Wno-unused-function -Wno-unused-but-set-parameter -I. -Wno-address -Wno-sign-compare -Icross/i586-pc-tapios/include
 ASM_FLAGS=-f elf -g
-LFLAGS=-melf_i386
+LFLAGS=-melf_i386 -Lcross/i586-pc-tapios/lib -lc
 
 all: kernel
 

@@ -80,10 +80,33 @@ int memcmp(const void* src1, const void* src2, uint32_t n)
 	return 0;
 }
 
+char *strncpy(char *dst, const char *src, uint32_t n)
+{
+	char *p1=dst;
+	const char *p2=src;
+	for(uint32_t i=0; i<n; ++i)
+	{
+		p1[i]=p2[i];
+		if(p2[i] == '\0') break;
+	}
+	return dst;
+}
+
 int strlen(const char* str)
 {
 	int len=0;
 	while(*str++) len++;
+	return len;
+}
+
+int strnlen(const char* str, uint32_t n)
+{
+	int len=0;
+	while(n>0 && *str++)
+	{
+		len++;
+		n--;
+	}
 	return len;
 }
 

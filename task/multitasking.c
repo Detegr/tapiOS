@@ -52,8 +52,9 @@ void setup_initial_process(vaddr_t entry_point)
 	current_process->kesp=current_process->esp0+KERNEL_STACK_SIZE;
 	current_process->state=running;
 	current_process->active=true;
-	//current_process->files_open=NULL;
+	strncpy((char*)current_process->cwd, "/", 2);
 	memset(current_process->esp0, 0, KERNEL_STACK_SIZE);
+	memset((void*)current_process->fds, 0, FD_MAX*sizeof(struct file*));
 	tss.esp0=(uint32_t)current_process->kesp;
 
 	__asm__ volatile(

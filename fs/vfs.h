@@ -2,6 +2,8 @@
 #define _TAPIOS_VFS_H_
 
 #include <stdint.h>
+#include <dirent.h>
+#include <sys/stat.h>
 
 struct inode_actions;
 
@@ -27,21 +29,16 @@ struct file_actions
 {
 	int32_t (*read)(struct file *file, void *to, uint32_t count);
 	int32_t (*write)(struct file *file, void *from, uint32_t count);
+	int32_t (*stat)(struct file *file, struct stat *st);
 	int32_t (*open)(struct file *file);
 	int32_t (*close)(struct file *file);
 };
 
-typedef struct DIR
+struct DIR
 {
 	uint32_t dir_fd;
-} DIR;
-
-// This is also defined in newlib. Is this bad?
-struct dirent
-{
-	int d_ino;
-	char d_name[256];
 };
+
 struct dirent dirent;
 
 struct inode_actions
@@ -50,17 +47,13 @@ struct inode_actions
 	struct dirent *(*readdir)(struct inode *node);
 };
 
-struct open_files
-{
-	struct file *file;
-	struct open_files *next;
-};
-
 volatile struct inode *root_fs;
 
 struct inode *vfs_search(struct inode *node, const char* name);
-int32_t vfs_open(struct inode *node, struct file *file);
+struct file *vfs_open(struct inode *node);
 int32_t vfs_read(struct file *file, void *to, uint32_t count);
+int32_t vfs_stat(struct file *file, struct stat *st);
+int32_t vfs_close(struct file *f);
 struct dirent *vfs_readdir(DIR *dirp);
 
 #endif

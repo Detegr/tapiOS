@@ -9,6 +9,7 @@
 #include <fs/vfs.h>
 #include <task/processtree.h>
 #include <task/scheduler.h>
+#include <sys/fcntl.h>
 
 extern void _return_from_exec(void);
 extern void _return_to_userspace(void);
@@ -23,34 +24,35 @@ int _closedir(DIR *dirp);
 int _readdir(DIR *dirp, struct dirent *ret);
 pid_t _waitpid(pid_t pid, int *status, int options);
 int _exec(const char *path, char **const argv, char **const envp);
+int _fstat(int fd, struct stat *buf);
+int _getcwd(char *buf, size_t size);
+int _chdir(char *path);
+int _close(int fd);
 
 typedef int(*syscall_ptr)();
 syscall_ptr syscalls[]={
 	&_exit, &_write, &_read, (syscall_ptr)&_sbrk,
 	&_open, (syscall_ptr)&_opendir, &_readdir,
-	&fork, &_waitpid, &_exec, &_closedir, &getpid
+	&fork, &_waitpid, &_exec, &_closedir, &getpid, &_fstat,
+	&_getcwd, &_chdir, &_close
 };
 
 int _exit(int code)
 {
-	/*
-	struct open_files *o=current_process->files_open;
-	while(o)
+	current_process->state=finished;
+
+	for(int i=0; i<FD_MAX; ++i)
 	{
-		if(o->file) kfree(o->file);
-		if(o->next)
+		if(current_process->fds[i] != NULL)
 		{
-			struct open_files *this=o;
-			o=o->next;
-			kfree(this);
+			vfs_close(current_process->fds[i]);
+			current_process->fds[i]=0;
 		}
 	}
-	*/
 	kfree(current_process->program);
 	kfree(current_process->pdir);
 	kfree(current_process->esp0);
 
-	current_process->state=finished;
 	reap_finished_processes();
 
 	/* Wait for the process to be switched.
@@ -203,8 +205,8 @@ int _open(const char* path, int flags)
 	struct inode *inode=vfs_search((struct inode*)root_fs, path);
 	if(inode)
 	{
-		struct file *f=kmalloc(sizeof(struct file)); // TODO: Free
-		if(vfs_open(inode, f) < 0) return -1;
+		struct file *f=vfs_open(inode);
+		if(!f) return -1;
 		return newfd(f);
 	}
 	else return -1;
@@ -218,13 +220,13 @@ struct DIR *_opendir(const char *dirpath)
 	{
 		if(!(inode->flags & 0x4000)) // TODO: Maybe not use ext2 stuff for flags?
 		{
-			//errno=ENODIR;
+			errno=ENOTDIR;
 			return NULL;
 		}
 		else
 		{
-			struct file *f=kmalloc(sizeof(struct file));
-			if(vfs_open(inode, f) < 0) return NULL;
+			struct file *f=vfs_open(inode);
+			if(!f) return NULL;
 			DIR *ret=kmalloc(sizeof(struct DIR));
 			ret->dir_fd=newfd(f);
 			return ret;
@@ -232,16 +234,29 @@ struct DIR *_opendir(const char *dirpath)
 	}
 	else
 	{
-		//errno=ENOENT;
+		errno=ENOENT;
 		return NULL;
 	}
 }
 
 int _closedir(DIR *dirp)
 {
-	struct file *f=current_process->fds[dirp->dir_fd];
-	if(--f->refcount == 0) kfree(f);
+	_close(dirp->dir_fd);
 	kfree(dirp);
+	return 0;
+}
+
+int _close(int fd)
+{
+	struct file *f=current_process->fds[fd];
+	if(!f)
+	{
+		errno=EBADF;
+		return -1;
+	}
+	vfs_close(f);
+	if(f->refcount == 0) kfree(f);
+	current_process->fds[fd]=0;
 	return 0;
 }
 
@@ -316,7 +331,6 @@ int _exec(const char *path, char **const argv, char **const envp)
 		kprintf("Read %d, expected %d\n", r, f->inode->size);
 		PANIC();
 	}
-
 	vaddr_t entry=init_elf_get_entry_point(prog);
 
 	// TODO: This current_process->brk fiddling is ugly.
@@ -337,6 +351,7 @@ int _exec(const char *path, char **const argv, char **const envp)
 	}
 	kfree(old_pdir);
 
+	setcwd_dirname((struct process*)current_process, argv_copy[0]);
 	argv_copy[argc]=NULL;
 	current_process->brk+=0x1000;
 	kalloc_page(current_process->brk, false, true);
@@ -346,6 +361,48 @@ int _exec(const char *path, char **const argv, char **const envp)
 	__asm__ volatile("mov esp, %0; jmp %1" :: "r"(stack_top), "r"((uint32_t)_return_to_userspace));
 
 	return 0; // Never reached
+}
+
+int _fstat(int fd, struct stat *buf)
+{
+	struct file *f=current_process->fds[fd];
+	if(!f) return -1;
+	return vfs_stat(f, buf);
+}
+
+int _getcwd(char *buf, size_t size)
+{
+	strncpy(buf, (const char*)current_process->cwd, size);
+	return 0;
+}
+
+int _chdir(char *path)
+{
+	if(strnlen(path, PATH_MAX) == PATH_MAX)
+	{
+		errno=ENAMETOOLONG;
+		return -1;
+	}
+	int fd=_open(path, O_RDONLY);
+	if(fd<0)
+	{
+		errno=ENOENT;
+		return -1;
+	}
+	struct stat st;
+	if((_fstat(fd, &st)) < 0)
+	{
+		errno=EIO;
+		return -1;
+	}
+	_close(fd);
+	if(!S_ISDIR(st.st_mode))
+	{
+		errno=ENOTDIR;
+		return -1;
+	}
+	setcwd((struct process*)current_process, path);
+	return 0;
 }
 
 void syscall(void *v)

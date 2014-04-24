@@ -77,10 +77,9 @@ void kmain(struct multiboot* b, uint32_t magic)
 	struct inode *node=vfs_search((struct inode*)root_fs, "/bin/init");
 	if(node)
 	{
-		struct file init;
-		vfs_open(node, &init);
+		struct file *init=vfs_open(node);
 		uint8_t *init_mem=kmalloc(node->size);
-		int read=vfs_read(&init, init_mem, node->size);
+		int read=vfs_read(init, init_mem, node->size);
 		vaddr_t entrypoint=init_elf_get_entry_point(init_mem);
 		setup_initial_process(entrypoint);
 	}

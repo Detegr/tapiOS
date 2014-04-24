@@ -21,6 +21,10 @@
 #define EXEC 10
 #define CLOSEDIR 11
 #define GETPID 12
+#define FSTAT 13
+#define GETCWD 14
+#define CHDIR 15
+#define CLOSE 16
 
 #define SYSCALL0(n) \
 	__asm__ volatile("int $0x80;" :: "a"(n));
@@ -53,11 +57,13 @@ void _exit()
 {
 	SYSCALL0(EXIT);
 }
-int close(int file) {return -1;}
-int fstat(int file, struct stat *st)
+int close(int fd)
 {
-	st->st_mode = S_IFCHR;
-	return 0;
+	SYSCALL1(CLOSE, fd);
+}
+int fstat(int fd, struct stat *st)
+{
+	SYSCALL2(FSTAT, fd, st);
 }
 pid_t getpid(void)
 {
@@ -93,10 +99,13 @@ caddr_t sbrk(int incr)
 {
 	SYSCALL1(SBRK, incr);
 }
-int stat(const char *file, struct stat *st)
+int stat(const char *path, struct stat *st)
 {
-	st->st_mode = S_IFCHR;
-	return 0;
+	int fd=open(path, O_RDONLY);
+	if(fd<0) return -1;
+	int ret = fstat(fd, st);
+	close(fd);
+	return ret;
 }
 clock_t times(struct tms *buf);
 int unlink(char *name);
@@ -161,7 +170,7 @@ mode_t umask(mode_t mask)
 
 int chdir(const char *path)
 {
-	return -1;
+	SYSCALL1(CHDIR, path);
 }
 
 int fcntl(int fd, int cmd, ...)
@@ -184,20 +193,20 @@ gid_t getegid(void)
 	return -1;
 }
 
+static int _getcwd(char *buf, size_t size)
+{
+	SYSCALL2(GETCWD, buf, size);
+}
+
 char *getcwd(char *buf, size_t size)
 {
-	if(size >= 2)
-	{
-		memcpy(buf, "/", 2);
-		return buf;
-	}
-	return NULL;
+	_getcwd(buf, size);
+	return buf;
 }
 
 int lstat(const char *path, struct stat *st)
 {
-	st->st_mode = S_IFCHR;
-	return 0;
+	return stat(path, st);
 }
 
 pid_t tcgetpgrp(int fd)

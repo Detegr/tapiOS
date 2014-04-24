@@ -113,7 +113,6 @@ void kfree(void *ptr)
 				kprintf("DOUBLE FREE: %x\n", ptr);
 				PANIC();
 			}
-			//kprintf("Freed %x, size was: %d\n", ptr, bi->size);
 			bi->reserved=false;
 			return;
 		}

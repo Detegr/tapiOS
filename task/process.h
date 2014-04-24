@@ -6,6 +6,7 @@
 #include <mem/vmm.h>
 #include <util/util.h>
 #include <fs/vfs.h>
+#include <limits.h>
 
 #define KERNEL_STACK_SIZE 2048
 #define FD_MAX 256
@@ -61,6 +62,7 @@ struct process
 	struct file *fds[FD_MAX];
 
 	vptr_t *program;
+	char cwd[PATH_MAX];
 };
 
 #ifndef SHARED_PROCESS_VARIABLES
@@ -75,5 +77,9 @@ int getpid(void);
 int newfd(struct file *f);
 vaddr_t init_elf_get_entry_point(uint8_t* elf);
 vptr_t *setup_usermode_stack(vaddr_t entry_point, int argc, char **const argv, vptr_t *stack_top_ptr);
+
+/* Gets dirname from executable path and assigns it to cwd of process p */
+void setcwd_dirname(struct process *p, const char *executable);
+void setcwd(struct process *p, const char *path);
 
 #endif

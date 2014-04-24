@@ -17,6 +17,8 @@ char char_for_scancode(uint8_t scancode)
 		case 0x09: return shift ? '*' : '8';
 		case 0x0A: return shift ? '(' : '9';
 		case 0x0B: return shift ? ')' : '0';
+		case 0x1A: return shift ? '{' : '[';
+		case 0x1B: return shift ? '}' : ']';
 		case 0x0C: ret='-'; break;
 		case 0x0D: ret='='; break;
 		case 0x1E: ret='a'; break;
@@ -48,11 +50,14 @@ char char_for_scancode(uint8_t scancode)
 		case 0x15: ret='y'; break;
 		case 0x2C: ret='z'; break;
 		case 0x27: return shift ? ':' : ';';
-		case 0x33: return ',';
-		case 0x34: return '.';
-		case 0x35: return '/';
+		case 0x33: return shift ? '<' : ',';
+		case 0x34: return shift ? '>' : '.';
+		case 0x35: return shift ? '?' : '/';
 		case 0x39: return ' ';
 		case 0x1C: return '\n';
+		case 0x9A:
+		case 0x9B:
+		case 0xB5:
 		case 0x8C:
 		case 0x9E:
 		case 0xB0:

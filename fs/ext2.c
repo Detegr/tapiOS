@@ -5,9 +5,11 @@
 #include <mem/vmm.h>
 #include <mem/kmalloc.h>
 #include <stdbool.h>
+#include <dirent.h>
 
 #define SUPERBLOCK_SIZE 1024
 #define SUPERBLOCK_OFFSET 1024
+#define ISDIR(x) (x->type_and_permissions & 0x4000)
 
 #define BLOCKSIZE(x) (uint32_t)(1024 << ((ext2_superblock*)x)->block_size_shift)
 
@@ -116,7 +118,7 @@ static struct dirent* ext2_readdir(struct inode *node)
 	{
 		prevnode=node;
 		inode=read_inode(node->superblock, node->inode_no);
-		if(!(inode->type_and_permissions & 0x4000))
+		if(!(ISDIR(inode)))
 		{
 			kprintf("Inode is not a directory\n");
 			return NULL;
@@ -148,7 +150,7 @@ static inline uint32_t min(uint32_t a, uint32_t b)
 struct inode *ext2_search(struct inode *node, const char *name)
 {
 	ext2_inode *inode=read_inode(node->superblock, node->inode_no);
-	if(!(inode->type_and_permissions & 0x4000)) return NULL; // Searching non-directories makes no sense
+	if(!(ISDIR(inode))) return NULL; // Searching non-directories makes no sense
 	// TODO: Other data blocks
 	ext2_directory *bdir;
 	ext2_directory *dir=bdir=get_block(node->superblock, inode->blocks[0]);
@@ -175,7 +177,7 @@ struct inode *ext2_search(struct inode *node, const char *name)
 	return NULL;
 }
 
-int32_t ext2_open(struct file *f)
+static int32_t ext2_open(struct file *f)
 {
 	ext2_inode *inode=read_inode(f->inode->superblock, f->inode->inode_no);
 	if(inode) return 0;
@@ -228,13 +230,14 @@ static int read_blocks(ext2_superblock *sb, struct file *f, uint8_t *to, uint32_
 	}
 	if(blocks[DOUBLY_INDIRECT_BLOCK])
 	{
-		uint32_t doubly_indirect_block[BLOCKSIZE(sb)];
+		uint32_t *doubly_indirect_block=kmalloc(BLOCKSIZE(sb) * sizeof(uint32_t));
 		memset(doubly_indirect_block, 0, BLOCKSIZE(sb) * sizeof(uint32_t));
 		read_block(sb, NULL, get_block(sb, blocks[DOUBLY_INDIRECT_BLOCK]), (uint8_t*)doubly_indirect_block, BLOCKSIZE(sb));
 		for(uint32_t i=0; i<BLOCKSIZE(sb); ++i)
 		{
 			read_indirect_block(sb, f, get_block(sb, doubly_indirect_block[i]), to, count);
 		}
+		kfree(doubly_indirect_block);
 	}
 	if(blocks[TRIPLY_INDIRECT_BLOCK])
 	{
@@ -253,15 +256,35 @@ static int read_blocks(ext2_superblock *sb, struct file *f, uint8_t *to, uint32_
 	return f->pos;
 }
 
-int32_t ext2_read(struct file *f, void *to, uint32_t count)
+static int32_t ext2_read(struct file *f, void *to, uint32_t count)
 {
 	ext2_inode *inode=read_inode(f->inode->superblock, f->inode->inode_no);
-	if((inode->type_and_permissions & 0x4000))
+	if(ISDIR(inode))
 	{
-		//errno=EISDIR;
+		errno=EISDIR;
 		return -1;
 	}
 	return read_blocks(f->inode->superblock, f, to, inode->blocks, count);
+}
+
+static int32_t ext2_stat(struct file *f, struct stat *st)
+{
+	ext2_inode *inode=read_inode(f->inode->superblock, f->inode->inode_no);
+	st->st_dev = -1; // Device id containing file
+	st->st_ino = f->inode->inode_no;
+	st->st_mode = ISDIR(inode) ? S_IFDIR : S_IFREG;
+	st->st_mode |= (S_IRWXU | S_IRWXG | S_IRWXO); // All permissions
+	st->st_nlink = 0; // Hard links NYI
+	st->st_uid = 0;
+	st->st_gid = 0;
+	st->st_rdev = -1; // Device id (if special file)
+	st->st_size = f->inode->size;
+	st->st_blksize = BLOCKSIZE(f->inode->superblock);
+	st->st_blocks = f->inode->size / 512; // TODO: What is this for?
+	st->st_atime = inode->access_time;
+	st->st_ctime = inode->creation_time;
+	st->st_mtime = inode->modification_time;
+	return 0;
 }
 
 struct inode *ext2_fs_init(uint8_t *fs_data)
@@ -287,6 +310,7 @@ struct inode *ext2_fs_init(uint8_t *fs_data)
 	ret->i_act->readdir=&ext2_readdir;
 	ret->f_act->open=&ext2_open;
 	ret->f_act->read=&ext2_read;
+	ret->f_act->stat=&ext2_stat;
 	print_startup_info("ext2", true);
 	return ret;
 }

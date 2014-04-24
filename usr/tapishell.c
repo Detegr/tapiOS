@@ -67,7 +67,7 @@ int main(int argc, char **argv)
 				char *argv[3];
 				char cmd[1024];
 				memset(cmd, 0, 1024);
-				stpcpy(stpcpy(cmd, "/bin/"), buf);
+				stpcpy(stpcpy(cmd, "/binaries/"), buf);
 				argv[0]=cmd;
 				argv[1]=cwd[0] ? cwd : "/";
 				argv[2]=NULL;

@@ -13,26 +13,42 @@ extern page_directory* kernel_pdir;
 extern void _return_to_userspace(void);
 extern void _return_to_userspace_from_syscall(void);
 
+void setcwd(struct process *p, const char *path)
+{
+	strncpy(p->cwd, path, PATH_MAX);
+}
+
+void setcwd_dirname(struct process *p, const char *executable)
+{
+	char *buf=kmalloc(PATH_MAX);
+	memset(buf, 0, PATH_MAX);
+	strncpy(buf, executable, PATH_MAX);
+	char *ptr=strtok(buf, '/');
+	int i=0;
+	while(ptr)
+	{
+		char *nextptr=strtok(NULL, '/');
+		if(!nextptr) break;
+		p->cwd[i++]='/';
+		int len=strlen(ptr)+1;
+		strncpy(&p->cwd[i], ptr, len);
+		i+=len;
+		ptr=nextptr;
+	}
+	kfree(buf);
+}
+
 static void copy_open_resources(struct process *from, struct process *to)
 {
 	for(int i=0; i<FD_MAX; ++i)
 	{
-		to->fds[i]=from->fds[i];
-	}
-	/*
-	if(from->files_open)
-	{
-		to->files_open=kmalloc(sizeof(struct open_files));
-		struct open_files *to_of=to->files_open;
-		struct open_files *of=from->files_open;
-		while((of=of->next))
+		if(from->fds[i])
 		{
-			to_of->next=kmalloc(sizeof(struct open_files));
-			memcpy(to_of->next, of, sizeof(struct open_files));
-			to_of=to_of->next;
+			to->fds[i]=from->fds[i];
+			to->fds[i]->refcount++;
 		}
+		else to->fds[i]=0;
 	}
-	*/
 }
 
 vptr_t *setup_child_stack(vptr_t *stack_top_ptr)
@@ -98,6 +114,7 @@ int fork(void)
 	child->kesp=setup_child_stack((vptr_t*)cregs);
 	child->brk=parent->brk;
 	child->user_stack=parent->user_stack;
+	strncpy(child->cwd, parent->cwd, PATH_MAX);
 
 	memset(child->stdoutbuf, 0, 256);
 	memset(child->keybuf, 0, 256);
@@ -142,7 +159,6 @@ int newfd(struct file *f)
 		if(current_process->fds[i] == NULL)
 		{
 			current_process->fds[i]=f;
-			f->refcount++;
 			return i;
 		}
 	}

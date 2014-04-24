@@ -35,39 +35,19 @@ struct inode *vfs_search(struct inode *node, const char *name)
 	return NULL;
 }
 
-int32_t vfs_open(struct inode *node, struct file *ret)
+struct file *vfs_open(struct inode *node)
 {
-	int32_t retval=0;
+	struct file *ret=kmalloc(sizeof(struct file)); // Will be freed on close
+	ret->refcount=1;
 	ret->inode=node;
 	ret->pos=0;
 	if(node->f_act->open)
 	{
-		retval=node->f_act->open(ret);
-		if(retval==-1) return -1;
+		if(node->f_act->open(ret) == -1) return NULL;
 	}
-	else return -1;
-	if(!current_process) return retval;
-
-	/*
-	struct open_files *of=current_process->files_open;
-	if(!of)
-	{
-		of=current_process->files_open=kmalloc(sizeof(struct open_files));
-		of->file=ret;
-		of->next=NULL;
-	}
-	else
-	{
-		struct open_files *of=current_process->files_open;
-		while(of->next) of=of->next;
-		of->next=kmalloc(sizeof(struct open_files));
-		of->next->next=NULL;
-		of=of->next;
-		of->file=ret;
-		of->next=NULL;
-	}
-	*/
-	return retval;
+	else return NULL;
+	if(!current_process) return NULL;
+	return ret;
 }
 
 int32_t vfs_read(struct file *file, void *to, uint32_t count)
@@ -79,10 +59,31 @@ int32_t vfs_read(struct file *file, void *to, uint32_t count)
 	return -1;
 }
 
+int32_t vfs_close(struct file *f)
+{
+	if(!f->inode) return -1;
+	if(f->refcount == 0) PANIC();
+	if(--f->refcount == 0)
+	{
+		if(f->inode == root_fs) return 0;
+		kfree(f->inode);
+	}
+	return 0;
+}
+
 struct dirent *vfs_readdir(DIR *dirp)
 {
 	struct file *filep=current_process->fds[dirp->dir_fd];
 	struct inode *inode=filep->inode;
 	if(!inode || !inode->i_act || !inode->i_act->readdir) return NULL;
 	return inode->i_act->readdir(inode);
+}
+
+int32_t vfs_stat(struct file *file, struct stat *st)
+{
+	if(file->inode->f_act->stat)
+	{
+		return file->inode->f_act->stat(file, st);
+	}
+	return -1;
 }
