@@ -15,6 +15,7 @@
 #include <fs/ext2.h>
 #include <task/multitasking.h>
 #include <task/processtree.h>
+#include <fcntl.h>
 
 #define KERNEL_VMA 0xC0000000
 
@@ -77,7 +78,7 @@ void kmain(struct multiboot* b, uint32_t magic)
 	struct inode *node=vfs_search((struct inode*)root_fs, "/bin/init");
 	if(node)
 	{
-		struct file *init=vfs_open(node, NULL);
+		struct file *init=vfs_open(node, NULL, O_RDONLY);
 		uint8_t *init_mem=kmalloc(node->size);
 		int read=vfs_read(init, init_mem, node->size);
 		vaddr_t entrypoint=init_elf_get_entry_point(init_mem);

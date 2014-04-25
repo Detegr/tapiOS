@@ -15,8 +15,15 @@
 #define USER_CODE_SEGMENT 0x18
 #define USER_DATA_SEGMENT 0x20
 
-#define ENOMEM 12
-#define EINVAL 22
+#define DIV_ROUND_UP(n,d) (n/d + (n%d != 0))
+#define GET_AND_SET_MSB(out, bitmap_uint32_addr) \
+	__asm__ volatile("bsf %0, %1" : "=g"(out) : "g"(*bitmap_uint32_addr)); \
+	if(out > 0) *bitmap_uint32_addr |= 1<<(out-1); \
+	else *bitmap_uint32_addr |= 1<<31; \
+	if(out==0) out=32;
+#define GET_AND_SET_LSB(out, bitmap_uint32_addr) \
+	__asm__ volatile("bsr %0, %1" : "=g"(out) : "g"(*bitmap_uint32_addr)); \
+	*bitmap_uint32_addr |= (1 << (++out));
 
 typedef int32_t pid_t;
 
@@ -35,8 +42,10 @@ int memcmp(const void* src1, const void* src2, uint32_t n);
 char *strncpy(char *dst, const char *src, uint32_t n);
 int strlen(const char* str);
 int strnlen(const char* str, uint32_t n);
+char *strndup(const char *str, uint32_t len);
 char *strtok(char *str, const char delim);
-void dirname(char *dst, const char *path);
+char *basename(char *path); /* GNU version */
+char *dirname(char *path);
 extern uint32_t _get_eip(void);
 
 #endif

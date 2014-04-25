@@ -64,12 +64,9 @@ physaddr_t kalloc_page_frame(void)
 	{
 		if(bitmap[i] != 0xFFFFFFFF)
 		{
-			int lsb=0;
-			__asm__ volatile("bsf %0, %1" : "=g"(lsb) : "g"(bitmap[i]));
-			if(lsb > 0) bitmap[i] |= 1<<(lsb-1);
-			else bitmap[i] |= 1<<31;
-			if(lsb==0) lsb=32;
-			return (i * 0x1000 * 32) + ((32-lsb) * 0x1000);
+			int msb=0;
+			GET_AND_SET_MSB(msb, &bitmap[i]);
+			return (i * 0x1000 * 32) + ((32-msb) * 0x1000);
 		}
 	}
 	return (physaddr_t)0x0;

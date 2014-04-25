@@ -28,9 +28,9 @@ struct file
 struct file_actions
 {
 	int32_t (*read)(struct file *file, void *to, uint32_t count);
-	int32_t (*write)(struct file *file, void *from, uint32_t count);
+	int32_t (*write)(struct file *file, void *data, uint32_t count);
 	int32_t (*stat)(struct file *file, struct stat *st);
-	int32_t (*open)(struct file *file);
+	int32_t (*open)(struct file *file, int flags);
 	int32_t (*close)(struct file *file);
 };
 
@@ -38,15 +38,18 @@ struct dirent dirent;
 
 struct inode_actions
 {
+	struct inode *(*new)(struct inode *node, const char *path);
 	struct inode *(*search)(struct inode *node, const char* name);
 	struct dirent *(*readdir)(struct inode *node);
 };
 
 volatile struct inode *root_fs;
 
+struct inode *vfs_new_inode(struct inode *fs, const char *path);
 struct inode *vfs_search(struct inode *node, const char* name);
-struct file *vfs_open(struct inode *node, int *status);
+struct file *vfs_open(struct inode *node, int *status, int flags);
 int32_t vfs_read(struct file *file, void *to, uint32_t count);
+int32_t vfs_write(struct file *file, void *data, uint32_t count);
 int32_t vfs_stat(struct file *file, struct stat *st);
 int32_t vfs_close(struct file *f);
 struct dirent *vfs_readdir(int dirfd);

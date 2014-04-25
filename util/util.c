@@ -1,5 +1,6 @@
 #include "util.h"
 #include <terminal/vga.h>
+#include <mem/kmalloc.h>
 
 extern void _outb(uint16_t dest, uint8_t src);
 extern void _outw(uint16_t dest, uint16_t src);
@@ -110,6 +111,14 @@ int strnlen(const char* str, uint32_t n)
 	return len;
 }
 
+char *strndup(const char *str, uint32_t len)
+{
+	int strlen=strnlen(str, len);
+	char *ret=kmalloc(strlen+1);
+	strncpy(ret, str, len);
+	return ret;
+}
+
 char *strtok(char *str, const char delim)
 {
 	static char *lastp=NULL;
@@ -130,4 +139,39 @@ char *strtok(char *str, const char delim)
 	}
 	lastp=NULL;
 	return oldp;
+}
+
+char *strchr(const char *str, char c)
+{
+	for(const char *p=str; *p; ++p)
+	{
+		if(*p == c) return (char*)p;
+	}
+	return NULL;
+}
+
+char *strrchr(const char *str, char c)
+{
+	const char *pp=NULL;
+	for(const char *p=str; *p; ++p)
+	{// Not very efficient, but who cares? :)
+		if(*p == c) pp=p;
+	}
+	return (char*)pp;
+}
+
+char *basename(char *path)
+{
+	char *ret=strrchr(path, '/');
+	return ret ? ret+1 : path;
+}
+
+char *dirname(char *path)
+{
+	char *sep=strrchr(path, '/');
+	if(!sep) return ".";
+	if(*(sep+1) == 0) {*sep=0; sep=strrchr(path, '/');}
+	if(!sep || sep == path) return "/";
+	*sep=0;
+	return path;
 }

@@ -178,6 +178,7 @@ int execve(const char *path, char **const argv, char **const envp)
 
 int dup2(int oldfd, int newfd)
 {
+	errno=EBADF;
 	return -1;
 }
 
@@ -198,6 +199,7 @@ int chdir(const char *path)
 
 int fcntl(int fd, int cmd, ...)
 {
+	errno=EBADF;
 	return -1;
 }
 

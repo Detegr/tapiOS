@@ -6,6 +6,7 @@
 #include <mem/kmalloc.h>
 #include <stdbool.h>
 #include <dirent.h>
+#include <limits.h>
 
 #define SUPERBLOCK_SIZE 1024
 #define SUPERBLOCK_OFFSET 1024
@@ -44,50 +45,72 @@ static void DEBUG_print_superblock(ext2_superblock* b)
 
 static void DEBUG_print_blockgroup_descriptor(ext2_blockgroup_descriptor* b)
 {
-	kprintf("bitmap_block_addr 0x%x\n", b->bitmap_block_addr);
-	kprintf("bitmap_inode_addr 0x%x\n", b->bitmap_inode_addr);
+	kprintf("bitmap_block_no 0x%x\n", b->bitmap_block_no);
+	kprintf("bitmap_inode_no 0x%x\n", b->bitmap_inode_no);
 	kprintf("inode_table_block %d\n", b->inode_table_block);
 	kprintf("unallocated_blocks %d\n", b->unallocated_blocks);
 	kprintf("unallocated_inodes %d\n", b->unallocated_inodes);
 	kprintf("directory_count %d\n", b->directory_count);
 }
 
-static void* get_block(ext2_superblock* b, int block)
+static void DEBUG_print_inode(ext2_inode *inode)
 {
-	void* p=b;
+	kprintf("uid: %d\n", inode->uid);
+	kprintf("type and permissions: %x\n", inode->type_and_permissions);
+	kprintf("hard link count: %d\n", inode->hard_link_count);
+}
+
+static void* get_block(const ext2_superblock* b, int block)
+{
+	void* p=(void*)b;
 	return p - SUPERBLOCK_SIZE + (BLOCKSIZE(b) * block);
 }
 
-static ext2_directory* advance(ext2_directory* d)
+static inline bool inside_dir(ext2_directory *dir, ext2_directory *dir_base, uint32_t dirsize)
 {
-	void* p=d;
-	p+=d->size;
-	ext2_directory* ret=p;
-	if(ret->inode==0) return NULL;
-	else return ret;
+	return (dir && ((uint32_t)dir-(uint32_t)dir_base < dirsize));
 }
 
-static ext2_inode* read_inode(ext2_superblock* b, int inode_index)
+static bool advance(ext2_directory **d)
 {
-	int blockgroup=(inode_index-1) / b->inodes_in_blockgroup;
-	int index=(inode_index-1) % b->inodes_in_blockgroup;
-	int inode_size=b->version_major >= 1 ? b->inode_size : 128;
-	int block=(index * inode_size) / BLOCKSIZE(b);
-	ext2_blockgroup_descriptor* bg_table=(ext2_blockgroup_descriptor*)((uint8_t*)b + SUPERBLOCK_SIZE + (blockgroup * sizeof(ext2_blockgroup_descriptor)));
-	ext2_blockgroup_descriptor* bg=&bg_table[blockgroup];
-	ext2_inode* inode_table=get_block(b, bg->inode_table_block);
-	return &inode_table[index];
-	/*
-	if(inode->type_and_permissions & 0x8000)
+	void* p=*d;
+	p+=(*d)->size;
+	ext2_directory* ret=p;
+	*d = p;
+	return ret->inode!=0;
+}
+
+static void advance_to_last(ext2_directory **d, int blocksize)
+{
+	ext2_directory *bdir=*d;
+	ext2_directory *d2=*d;
+	while(inside_dir(*d, bdir, blocksize))
 	{
-		kprintf("Contents of inode %d:\n", inode_index);
-		uint8_t* p=get_block(b, inode->block0);
-		for(uint32_t i=0; i<inode->size_low; ++i)
-		{
-			kprintf("%c", p[i]);
-		}
+		d2=*d;
+		advance(d);
 	}
-	return NULL;*/
+	*d=d2;
+}
+
+static inline ext2_blockgroup_descriptor *get_blockgroup_descriptor_table(const ext2_superblock *sb)
+{
+	return (ext2_blockgroup_descriptor*)((uint8_t*)sb + SUPERBLOCK_SIZE);
+}
+
+static ext2_inode* read_inode(const ext2_superblock* sb, int inode_index)
+{
+	int blockgroup=(inode_index-1) / sb->inodes_in_blockgroup;
+	int index=(inode_index-1) % sb->inodes_in_blockgroup;
+	int inode_size=sb->version_major >= 1 ? sb->inode_size : 128;
+	int block=(index * inode_size) / BLOCKSIZE(sb);
+	ext2_blockgroup_descriptor* bg_table=get_blockgroup_descriptor_table(sb);
+	ext2_inode* inode_table=get_block(sb, bg_table[blockgroup].inode_table_block);
+	return &inode_table[index];
+}
+
+static inline uint32_t min(uint32_t a, uint32_t b)
+{
+	if(a<b) return a; else return b;
 }
 
 static struct dirent* ext2_readdir(struct inode *node)
@@ -99,12 +122,12 @@ static struct dirent* ext2_readdir(struct inode *node)
 
 	if(prevnode==node)
 	{
-		if(dir && ((uint32_t)dir-(uint32_t)bdir < BLOCKSIZE(node->superblock)))
+		if(inside_dir(dir, bdir, BLOCKSIZE(node->superblock)))
 		{
 			dirent.d_ino=dir->inode;
 			memcpy(&dirent.d_name, &dir->name, dir->name_length_low);
 			dirent.d_name[dir->name_length_low]=0;
-			dir=advance(dir);
+			advance(&dir);
 			return &dirent;
 		}
 		else
@@ -125,26 +148,16 @@ static struct dirent* ext2_readdir(struct inode *node)
 		}
 		// TODO: Other data blocks
 		bdir=dir=get_block(node->superblock, inode->blocks[0]);
-		if(dir && ((uint32_t)bdir-(uint32_t)dir < BLOCKSIZE(node->superblock)))
+		if(inside_dir(bdir, dir, BLOCKSIZE(node->superblock)))
 		{
 			dirent.d_ino=dir->inode;
 			memcpy(&dirent.d_name, &dir->name, dir->name_length_low);
 			dirent.d_name[dir->name_length_low]=0;
-			dir=advance(dir);
+			advance(&dir);
 			return &dirent;
 		}
 		else return NULL;
 	}
-}
-
-static inline bool inside_dir(ext2_directory *dir, ext2_directory *dir_base, uint32_t dirsize)
-{
-	return (dir && ((uint32_t)dir-(uint32_t)dir_base < dirsize));
-}
-
-static inline uint32_t min(uint32_t a, uint32_t b)
-{
-	if(a<b) return a; else return b;
 }
 
 struct inode *ext2_search(struct inode *node, const char *name)
@@ -161,7 +174,7 @@ struct inode *ext2_search(struct inode *node, const char *name)
 			if(memcmp(&dir->name, name, dir->name_length_low) == 0)
 			{
 				ext2_inode *retinode=read_inode(node->superblock, dir->inode);
-				struct inode *ret=kmalloc(sizeof(struct inode)); // TODO: Free
+				struct inode *ret=kmalloc(sizeof(struct inode));
 				memcpy(ret->name, &dir->name, dir->name_length_low);
 				ret->inode_no=dir->inode;
 				ret->flags=retinode->type_and_permissions;
@@ -172,12 +185,128 @@ struct inode *ext2_search(struct inode *node, const char *name)
 				return ret;
 			}
 		}
-		dir=advance(dir);
+		advance(&dir);
 	}
 	return NULL;
 }
 
-static int32_t ext2_open(struct file *f)
+static uint16_t calculate_dir_size(ext2_directory *d)
+{
+	if(d->name_length_low > (sizeof(ext2_directory)-8))
+	{
+		uint16_t ret=d->name_length_low + 8;
+		ret += ret % 4;
+		return ret;
+	}
+	return sizeof(ext2_directory);
+}
+
+static void do_insert(ext2_superblock *sb, ext2_directory *dir, uint32_t inode_no, const char *name)
+{
+	advance_to_last(&dir, BLOCKSIZE(sb));
+	uint16_t oldsize=dir->size;
+	dir->size=calculate_dir_size(dir);
+	advance(&dir);
+	int namelen=strnlen(name, 256);
+	strncpy((char*)&dir->name, name, namelen+1);
+	dir->name_length_high=0;
+	dir->name_length_low=namelen;
+	dir->inode=inode_no;
+	dir->size=oldsize-calculate_dir_size(dir);
+	//kprintf("Successfully inserted\n");
+}
+
+static void insert_inode_to_directory(ext2_superblock *sb, ext2_inode *fs, uint32_t inode_no, const char *path)
+{
+	ext2_directory *bdir, *dir;
+	// TODO: Other data blocks
+	dir=bdir=get_block(sb, fs->blocks[0]);
+
+	char fullpath[PATH_MAX];
+	strncpy(fullpath, path, PATH_MAX);
+	char *dname=dirname(fullpath);
+	char* name=strtok(dname, '/');
+	if(!name)
+	{
+		do_insert(sb, dir, inode_no, basename((char*)path));
+		return;
+	}
+	PANIC();
+	/*
+	ext2_inode *wnode=fs;
+	do
+	{
+		if(!wnode) return;
+		while(inside_dir(dir, bdir, BLOCKSIZE(sb)))
+		{
+			if(strnlen(name, 256) == dir->name_length_low &&
+				memcmp(&dir->name, name, dir->name_length_low) == 0)
+			{
+				kprintf("Found directory\n");
+				return;
+			}
+		}
+	} while((name=strtok(NULL, '/')));
+	PANIC();
+	*/
+	return;
+}
+
+struct inode *ext2_new_inode(struct inode *node, const char *path)
+{
+	ext2_superblock *sb=node->superblock;
+	if(!sb) PANIC();
+	int c1 = DIV_ROUND_UP(sb->blocks, sb->blocks_in_blockgroup);
+	int c2 = DIV_ROUND_UP(sb->inodes, sb->inodes_in_blockgroup);
+	if(c1 != c2) PANIC();
+	for(int blockgroup=0; blockgroup<c1; ++blockgroup)
+	{
+		ext2_blockgroup_descriptor *desc=&get_blockgroup_descriptor_table(sb)[blockgroup];
+		if(desc->unallocated_inodes==0) continue;
+		uint32_t *inode_bitmap=get_block(sb, desc->bitmap_inode_no);
+		uint32_t len=BLOCKSIZE(sb)/sizeof(uint32_t);
+		int inode_index=-1;
+		for(uint32_t i=0; i<len; ++i)
+		{
+			if(inode_bitmap[i] != 0xFFFFFFFF)
+			{
+				GET_AND_SET_LSB(inode_index, &inode_bitmap[i]);
+				desc->unallocated_inodes--;
+				break;
+			}
+		}
+		inode_index++; // inode indexes start from 1 but in bitmap they start from 0, so adjust
+		if(inode_index<0)
+		{
+			kprintf("Couldn't find free inode\n");
+			PANIC();
+		}
+		//kprintf("Found free inode: %d\n", inode_index);
+		ext2_inode *inode=&((ext2_inode*)(get_block(sb, desc->inode_table_block)))[inode_index];
+		memset(inode, 0, sizeof(ext2_inode));
+		inode->type_and_permissions=0x8000;
+		inode->hard_link_count=1;
+		inode->size_low=0;
+		inode->size_high=0;
+		inode->fragment_size=0;
+		//DEBUG_print_inode(inode);
+		insert_inode_to_directory(sb, read_inode(sb, node->inode_no), inode_index, path);
+
+		struct inode *ret=kmalloc(sizeof(struct inode));
+		ret->inode_no=inode_index;
+		ret->flags=0x8000; // Regular file
+		ret->size=0;
+		ret->superblock=sb;
+		ret->i_act=node->i_act;
+		ret->f_act=node->f_act;
+		return ret;
+	}
+	kprintf("NYI: Allocate new blockgroup\n");
+	PANIC();
+	return NULL;
+}
+
+static int32_t ext2_open(struct file *f, int flags)
 {
 	ext2_inode *inode=read_inode(f->inode->superblock, f->inode->inode_no);
 	if(inode) return 0;
@@ -266,6 +395,11 @@ static int32_t ext2_read(struct file *f, void *to, uint32_t count)
 	return read_blocks(f->inode->superblock, f, to, inode->blocks, count);
 }
 
+static int32_t ext2_write(struct file *from, void *data, uint32_t count)
+{
+	return -1;
+}
+
 static int32_t ext2_stat(struct file *f, struct stat *st)
 {
 	ext2_inode *inode=read_inode(f->inode->superblock, f->inode->inode_no);
@@ -295,7 +429,6 @@ struct inode *ext2_fs_init(uint8_t *fs_data)
 		return NULL;
 	}
 	struct inode *ret=kmalloc(sizeof(struct inode));
-	//int blockgroup_count=((sb->blocks+(sb->blocks_in_blockgroup-1))/sb->blocks_in_blockgroup);
 	ext2_inode* inode=read_inode(sb, 2); // inode 2 is always the root node
 	ext2_directory* d=get_block(sb, inode->blocks[0]);
 	memcpy(ret->name, &d->name, d->name_length_low);
@@ -305,10 +438,12 @@ struct inode *ext2_fs_init(uint8_t *fs_data)
 	ret->superblock=sb;
 	ret->i_act=kmalloc(sizeof(struct inode_actions));
 	ret->f_act=kmalloc(sizeof(struct file_actions));
+	ret->i_act->new=&ext2_new_inode;
 	ret->i_act->search=&ext2_search;
 	ret->i_act->readdir=&ext2_readdir;
 	ret->f_act->open=&ext2_open;
 	ret->f_act->read=&ext2_read;
+	ret->f_act->write=&ext2_write;
 	ret->f_act->stat=&ext2_stat;
 	print_startup_info("ext2", true);
 	return ret;

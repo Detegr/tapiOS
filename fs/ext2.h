@@ -32,7 +32,7 @@ typedef struct
 	uint16_t reserved_blocks_uid;
 	uint16_t reserved_blocks_gid;
 	// If version_major > 1
-	uint32_t first_free_inode;
+	uint32_t first_nonreserved_inode;
 	uint16_t inode_size;
 	uint16_t superblock_block_group;
 	uint32_t optional_features;
@@ -53,8 +53,8 @@ typedef struct
 
 typedef struct
 {
-	uint32_t bitmap_block_addr;
-	uint32_t bitmap_inode_addr;
+	uint32_t bitmap_block_no;
+	uint32_t bitmap_inode_no;
 	uint32_t inode_table_block;
 	uint16_t unallocated_blocks;
 	uint16_t unallocated_inodes;

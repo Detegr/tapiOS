@@ -153,12 +153,19 @@ done:
 
 int _write(int fd, uint8_t* to, uint32_t size)
 {
-	char* str=(char*)to;
-	for(unsigned i=0; i<size; ++i)
+	if(fd<=2)
 	{
-		kprintc(str[i]);
+		char* str=(char*)to;
+		for(uint32_t i=0; i<size; ++i)
+		{
+			kprintc(str[i]);
+		}
+		return size;
 	}
-	return size;
+	else
+	{
+		return -EBADF;
+	}
 }
 
 void* _sbrk(int32_t increment)
@@ -200,15 +207,15 @@ int _open(const char* path, int flags)
 	// flags ignored for now, expecting O_RDONLY
 	// also expecting a full path
 	if(!root_fs) PANIC();
+	if(strnlen(path, PATH_MAX) >= PATH_MAX) return -ENAMETOOLONG;
 	struct inode *inode=vfs_search((struct inode*)root_fs, path);
-	if(inode)
-	{
-		int status;
-		struct file *f=vfs_open(inode, &status);
-		if(!f) return status;
-		return newfd(f);
-	}
-	return -ENOENT;
+	if(inode && (flags & (O_CREAT|O_EXCL))) return -EEXIST;
+	int status;
+	if(!inode && (flags & O_CREAT)) inode=vfs_new_inode((struct inode*)root_fs, path);
+	if(!inode) return -ENOENT;
+	struct file *f=vfs_open(inode, &status, flags);
+	if(!f) return status;
+	return newfd(f);
 }
 
 int _close(int fd)

@@ -35,7 +35,16 @@ struct inode *vfs_search(struct inode *node, const char *name)
 	return NULL;
 }
 
-struct file *vfs_open(struct inode *node, int *status)
+struct inode *vfs_new_inode(struct inode *fs, const char *path)
+{
+	if(fs->i_act->new)
+	{
+		return fs->i_act->new(fs, path);
+	}
+	return NULL;
+}
+
+struct file *vfs_open(struct inode *node, int *status, int flags)
 {
 	struct file *ret=kmalloc(sizeof(struct file)); // Will be freed on close
 	ret->refcount=1;
@@ -44,7 +53,7 @@ struct file *vfs_open(struct inode *node, int *status)
 	int retval;
 	if(node->f_act->open)
 	{
-		if((retval=node->f_act->open(ret)) < 0)
+		if((retval=node->f_act->open(ret, flags)) < 0)
 		{
 			kfree(ret);
 			if(status) *status=-retval;
@@ -66,6 +75,15 @@ int32_t vfs_read(struct file *file, void *to, uint32_t count)
 	if(file->inode->f_act->read)
 	{
 		return file->inode->f_act->read(file, to, count);
+	}
+	return -EBADF;
+}
+
+int32_t vfs_write(struct file *file, void *data, uint32_t count)
+{
+	if(file->inode->f_act->write)
+	{
+		return file->inode->f_act->write(file, data, count);
 	}
 	return -EBADF;
 }
