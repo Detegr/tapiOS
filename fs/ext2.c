@@ -181,7 +181,7 @@ static int32_t ext2_open(struct file *f)
 {
 	ext2_inode *inode=read_inode(f->inode->superblock, f->inode->inode_no);
 	if(inode) return 0;
-	else return -1;
+	else return -ENOENT;
 }
 
 static int read_block(ext2_superblock *sb, struct file *f, uint8_t *block, uint8_t *to, uint32_t count)
@@ -261,8 +261,7 @@ static int32_t ext2_read(struct file *f, void *to, uint32_t count)
 	ext2_inode *inode=read_inode(f->inode->superblock, f->inode->inode_no);
 	if(ISDIR(inode))
 	{
-		errno=EISDIR;
-		return -1;
+		return -EISDIR;
 	}
 	return read_blocks(f->inode->superblock, f, to, inode->blocks, count);
 }

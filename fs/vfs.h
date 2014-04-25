@@ -34,11 +34,6 @@ struct file_actions
 	int32_t (*close)(struct file *file);
 };
 
-struct DIR
-{
-	uint32_t dir_fd;
-};
-
 struct dirent dirent;
 
 struct inode_actions
@@ -50,10 +45,10 @@ struct inode_actions
 volatile struct inode *root_fs;
 
 struct inode *vfs_search(struct inode *node, const char* name);
-struct file *vfs_open(struct inode *node);
+struct file *vfs_open(struct inode *node, int *status);
 int32_t vfs_read(struct file *file, void *to, uint32_t count);
 int32_t vfs_stat(struct file *file, struct stat *st);
 int32_t vfs_close(struct file *f);
-struct dirent *vfs_readdir(DIR *dirp);
+struct dirent *vfs_readdir(int dirfd);
 
 #endif

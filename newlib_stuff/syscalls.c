@@ -2,10 +2,11 @@
 #include <sys/types.h>
 #include <sys/fcntl.h>
 #include <sys/times.h>
-#include <sys/errno.h>
 #include <sys/time.h>
+#include <errno.h>
 #include <stdio.h>
 #include <signal.h>
+#include <stdlib.h>
 
 #include "sys/dirent.h"
 
@@ -27,31 +28,36 @@
 #define CLOSE 16
 
 #define SYSCALL0(n) \
-	__asm__ volatile("int $0x80;" :: "a"(n));
+	int ret; \
+	__asm__ volatile("int $0x80;" : "=a"(ret) : "0"(n)); \
+	if(ret<0) { errno=-ret; return -1; } \
+	return ret;
 
 #define SYSCALL1(n,arg1) \
 	int ret; \
 	__asm__ volatile("int $0x80;" : "=a"(ret) : "0"(n), "b"(arg1)); \
+	if(ret<0) { errno=-ret; return -1; } \
 	return ret;
 
 #define SYSCALL2(n,arg1,arg2) \
 	int ret; \
 	__asm__ volatile("int $0x80;" : "=a"(ret) : "0"(n), "b"(arg1), "c"(arg2)); \
+	if(ret<0) { errno=-ret; return -1; } \
 	return ret;
 
 #define SYSCALL3(n,arg1,arg2,arg3) \
 	int ret; \
 	__asm__ volatile("int $0x80;" : "=a"(ret) : "0"(n), "b"(arg1), "c"(arg2), "d"(arg3)); \
+	if(ret<0) { errno=-ret; return -1; } \
 	return ret;
-
-// Where should the definition of these go?
-typedef struct DIR
-{
-	int dir_fd;
-} DIR;
 
 /* pointer to array of char * strings that define the current environment variables */
 char **environ;
+
+struct DIR
+{
+	int dir_fd;
+};
 
 void _exit()
 {
@@ -103,8 +109,12 @@ int stat(const char *path, struct stat *st)
 {
 	int fd=open(path, O_RDONLY);
 	if(fd<0) return -1;
+
 	int ret = fstat(fd, st);
 	close(fd);
+	if(ret<0) return -1;
+
+	errno=0;
 	return ret;
 }
 clock_t times(struct tms *buf);
@@ -116,19 +126,32 @@ int write(int file, char *ptr, int len)
 
 DIR *opendir(const char* name)
 {
-	SYSCALL1(OPENDIR, name);
+	int fd=open(name, O_RDONLY);
+	if(fd<0) return NULL;
+	struct stat st;
+	if((fstat(fd, &st)) < 0) return NULL;
+	if(!S_ISDIR(st.st_mode))
+	{
+		errno=-ENOTDIR;
+		return NULL;
+	}
+	DIR *ret=malloc(sizeof(DIR));
+	ret->dir_fd=fd;
+	return ret;
 }
 
 int closedir(DIR *dirp)
 {
-	SYSCALL1(CLOSEDIR, dirp);
+	int ret=close(dirp->dir_fd);
+	if(ret<0) return -1;
+	free(dirp);
 }
 
 struct dirent *readdir(DIR *dirp)
 {
 	static struct dirent de;
 	int ret;
-	__asm__ volatile("int $0x80;" : "=a"(ret) : "0"(READDIR), "b"(dirp), "c"(&de));
+	__asm__ volatile("int $0x80;" : "=a"(ret) : "0"(READDIR), "b"(dirp->dir_fd), "c"(&de));
 	if(ret==0) return &de;
 	else return NULL;
 }

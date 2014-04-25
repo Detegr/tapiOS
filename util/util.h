@@ -6,6 +6,8 @@
 #include <stddef.h>
 #include <errno.h>
 
+#undef errno // Only want the definitions from errno.h
+
 #define PANIC() panic(__FILE__,__LINE__)
 
 #define KERNEL_CODE_SEGMENT 0x08

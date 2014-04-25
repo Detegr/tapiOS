@@ -19,9 +19,7 @@ int _write(int fd, uint8_t* to, uint32_t size);
 int _read(int fd, uint8_t* to, uint32_t size);
 void* _sbrk(int32_t increment);
 int _open(const char* path, int flags);
-struct DIR *_opendir(const char *dirpath);
-int _closedir(DIR *dirp);
-int _readdir(DIR *dirp, struct dirent *ret);
+int _readdir(int dirfd, struct dirent *ret);
 pid_t _waitpid(pid_t pid, int *status, int options);
 int _exec(const char *path, char **const argv, char **const envp);
 int _fstat(int fd, struct stat *buf);
@@ -32,8 +30,8 @@ int _close(int fd);
 typedef int(*syscall_ptr)();
 syscall_ptr syscalls[]={
 	&_exit, &_write, &_read, (syscall_ptr)&_sbrk,
-	&_open, (syscall_ptr)&_opendir, &_readdir,
-	&fork, &_waitpid, &_exec, &_closedir, &getpid, &_fstat,
+	&_open, NULL, &_readdir,
+	&fork, &_waitpid, &_exec, NULL, &getpid, &_fstat,
 	&_getcwd, &_chdir, &_close
 };
 
@@ -205,45 +203,12 @@ int _open(const char* path, int flags)
 	struct inode *inode=vfs_search((struct inode*)root_fs, path);
 	if(inode)
 	{
-		struct file *f=vfs_open(inode);
-		if(!f) return -1;
+		int status;
+		struct file *f=vfs_open(inode, &status);
+		if(!f) return status;
 		return newfd(f);
 	}
-	else return -1;
-}
-
-struct DIR *_opendir(const char *dirpath)
-{
-	if(!root_fs) PANIC();
-	struct inode *inode=vfs_search((struct inode*)root_fs, dirpath);
-	if(inode)
-	{
-		if(!(inode->flags & 0x4000)) // TODO: Maybe not use ext2 stuff for flags?
-		{
-			errno=ENOTDIR;
-			return NULL;
-		}
-		else
-		{
-			struct file *f=vfs_open(inode);
-			if(!f) return NULL;
-			DIR *ret=kmalloc(sizeof(struct DIR));
-			ret->dir_fd=newfd(f);
-			return ret;
-		}
-	}
-	else
-	{
-		errno=ENOENT;
-		return NULL;
-	}
-}
-
-int _closedir(DIR *dirp)
-{
-	_close(dirp->dir_fd);
-	kfree(dirp);
-	return 0;
+	return -ENOENT;
 }
 
 int _close(int fd)
@@ -251,8 +216,7 @@ int _close(int fd)
 	struct file *f=current_process->fds[fd];
 	if(!f)
 	{
-		errno=EBADF;
-		return -1;
+		return -EBADF;
 	}
 	vfs_close(f);
 	if(f->refcount == 0) kfree(f);
@@ -260,9 +224,9 @@ int _close(int fd)
 	return 0;
 }
 
-int _readdir(DIR *dirp, struct dirent *ret)
+int _readdir(int dirfd, struct dirent *ret)
 {
-	struct dirent *de=vfs_readdir(dirp);
+	struct dirent *de=vfs_readdir(dirfd);
 	if(de)
 	{
 		memcpy(ret, de, sizeof(struct dirent));
@@ -288,6 +252,7 @@ pid_t _waitpid(pid_t pid, int *status, int options)
 		current_process->state=waiting;
 		while(pnode->first_child) __asm__("sti;hlt");
 		current_process->state=running;
+		if(status) *status = 0;
 		return ret;
 	}
 	if(pid > 0)
@@ -297,6 +262,7 @@ pid_t _waitpid(pid_t pid, int *status, int options)
 		current_process->state=waiting;
 		while(pnode) __asm__("sti;hlt");
 		current_process->state=running;
+		if(status) *status = 0;
 		return pid;
 	}
 	return -1;
@@ -305,7 +271,7 @@ pid_t _waitpid(pid_t pid, int *status, int options)
 int _exec(const char *path, char **const argv, char **const envp)
 {
 	int fd=_open(path, 0);
-	if(fd<0) return -1;
+	if(fd<0) return fd;
 
 	int argc=0;
 	for(int i=0;; ++i, ++argc)
@@ -366,7 +332,10 @@ int _exec(const char *path, char **const argv, char **const envp)
 int _fstat(int fd, struct stat *buf)
 {
 	struct file *f=current_process->fds[fd];
-	if(!f) return -1;
+	if(!f)
+	{
+		return -EBADF;
+	}
 	return vfs_stat(f, buf);
 }
 
@@ -380,26 +349,22 @@ int _chdir(char *path)
 {
 	if(strnlen(path, PATH_MAX) == PATH_MAX)
 	{
-		errno=ENAMETOOLONG;
-		return -1;
+		return -ENAMETOOLONG;
 	}
 	int fd=_open(path, O_RDONLY);
 	if(fd<0)
 	{
-		errno=ENOENT;
-		return -1;
+		return -ENOENT;
 	}
 	struct stat st;
 	if((_fstat(fd, &st)) < 0)
 	{
-		errno=EIO;
-		return -1;
+		return -EIO;
 	}
 	_close(fd);
 	if(!S_ISDIR(st.st_mode))
 	{
-		errno=ENOTDIR;
-		return -1;
+		return -ENOTDIR;
 	}
 	setcwd((struct process*)current_process, path);
 	return 0;
