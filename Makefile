@@ -12,6 +12,10 @@ kernel: $(OBJECTS)
 	ld -T boot/link.ld $(OBJECTS) -o tapios/boot/kernel.bin $(LFLAGS)
 	grub-mkrescue -o tapios.iso tapios
 
+userspace:
+	make -C usr
+	make iso
+
 %.o : %.c %.h
 	$(CC) $(CFLAGS) -c $< -o $@ -g3
 
