@@ -26,11 +26,12 @@ int _fstat(int fd, struct stat *buf);
 int _getcwd(char *buf, size_t size);
 int _chdir(char *path);
 int _close(int fd);
+int _dup2(int oldfd, int newfd);
 
 typedef int(*syscall_ptr)();
 syscall_ptr syscalls[]={
 	&_exit, &_write, &_read, (syscall_ptr)&_sbrk,
-	&_open, NULL, &_readdir,
+	&_open, &_dup2, &_readdir,
 	&fork, &_waitpid, &_exec, NULL, &getpid, &_fstat,
 	&_getcwd, &_chdir, &_close
 };
@@ -374,6 +375,17 @@ int _chdir(char *path)
 		return -ENOTDIR;
 	}
 	setcwd((struct process*)current_process, path);
+	return 0;
+}
+
+int _dup2(int oldfd, int newfd)
+{
+	struct file *f=current_process->fds[oldfd];
+	if(!f) return -EBADF;
+	if(oldfd==newfd) return newfd;
+	_close(newfd);
+	f->refcount++;
+	current_process->fds[newfd]=f;
 	return 0;
 }
 

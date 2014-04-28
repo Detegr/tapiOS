@@ -15,7 +15,7 @@
 #define READ 3
 #define SBRK 4
 #define OPEN 5
-#define OPENDIR 6
+#define DUP2 6
 #define READDIR 7
 #define FORK 8
 #define WAITPID 9
@@ -178,8 +178,7 @@ int execve(const char *path, char **const argv, char **const envp)
 
 int dup2(int oldfd, int newfd)
 {
-	errno=EBADF;
-	return -1;
+	SYSCALL2(DUP2, oldfd, newfd);
 }
 
 int pipe(int pipefd[2])
