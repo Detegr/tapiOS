@@ -9,3 +9,4 @@ struct dirent
 
 DIR *opendir(const char* name);
 struct dirent *readdir(DIR *dirp);
+int closedir(DIR *dirp);
