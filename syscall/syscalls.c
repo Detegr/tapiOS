@@ -118,7 +118,7 @@ int _open(const char* path, int flags)
 	if(!root_fs) PANIC();
 	if(strnlen(path, PATH_MAX) >= PATH_MAX) return -ENAMETOOLONG;
 	struct inode *inode=vfs_search((struct inode*)root_fs, path);
-	if(inode && (flags & (O_CREAT|O_EXCL))) return -EEXIST;
+	if(inode && ((flags & (O_CREAT|O_EXCL)) == (O_CREAT|O_EXCL))) return -EEXIST;
 	int status;
 	char *dirpath=strndup(path, PATH_MAX);
 	struct inode *dir=vfs_search((struct inode*)root_fs, dirname(dirpath));
