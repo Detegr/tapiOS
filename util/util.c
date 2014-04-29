@@ -93,6 +93,19 @@ char *strncpy(char *dst, const char *src, uint32_t n)
 	return dst;
 }
 
+int strncmp(const char *lhs, const char *rhs, uint32_t n)
+{
+	const char *p=lhs;
+	const char *pp=rhs;
+	while(*p && *pp && n>0)
+	{
+		if(*p < *pp) return -1;
+		if(*p > *pp) return 1;
+		n--;
+	}
+	return 0;
+}
+
 int strlen(const char* str)
 {
 	int len=0;
@@ -174,4 +187,9 @@ char *dirname(char *path)
 	if(!sep || sep == path) return "/";
 	*sep=0;
 	return path;
+}
+
+inline int max(int a, int b)
+{
+	return a > b ? a : b;
 }

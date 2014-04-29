@@ -40,6 +40,7 @@ void* memmove(void* dst, const void* src, uint32_t size);
 void* memset(void* dst, uint8_t c, uint32_t n);
 int memcmp(const void* src1, const void* src2, uint32_t n);
 char *strncpy(char *dst, const char *src, uint32_t n);
+int strncmp(const char *lhs, const char *rhs, uint32_t n);
 int strlen(const char* str);
 int strnlen(const char* str, uint32_t n);
 char *strndup(const char *str, uint32_t len);
@@ -47,5 +48,6 @@ char *strtok(char *str, const char delim);
 char *basename(char *path); /* GNU version */
 char *dirname(char *path);
 extern uint32_t _get_eip(void);
+int max(int a, int b);
 
 #endif
