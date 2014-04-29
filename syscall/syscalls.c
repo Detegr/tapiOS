@@ -27,12 +27,13 @@ int _getcwd(char *buf, size_t size);
 int _chdir(char *path);
 int _close(int fd);
 int _dup2(int oldfd, int newfd);
+int _fcntl(int fd, int cmd, int arg);
 
 typedef int(*syscall_ptr)();
 syscall_ptr syscalls[]={
 	&_exit, &_write, &_read, (syscall_ptr)&_sbrk,
 	&_open, &_dup2, &_readdir,
-	&fork, &_waitpid, &_exec, NULL, &getpid, &_fstat,
+	&fork, &_waitpid, &_exec, &_fcntl, &getpid, &_fstat,
 	&_getcwd, &_chdir, &_close
 };
 
@@ -387,6 +388,25 @@ int _dup2(int oldfd, int newfd)
 	f->refcount++;
 	current_process->fds[newfd]=f;
 	return 0;
+}
+
+int _fcntl(int fd, int cmd, int arg)
+{
+	if(cmd==F_DUPFD)
+	{
+		if(fd<0 || fd>=FD_MAX) return -EINVAL;
+		for(int i=arg; i<FD_MAX; ++i)
+		{
+			if(!current_process->fds[i])
+			{
+				int ret=_dup2(fd, i);
+				if(ret<0) return ret;
+				return i;
+			}
+		}
+		return -EMFILE;
+	}
+	return -EINVAL;
 }
 
 void syscall(void *v)

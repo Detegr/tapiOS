@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <stdarg.h>
 
 #include "sys/dirent.h"
 
@@ -20,7 +21,7 @@
 #define FORK 8
 #define WAITPID 9
 #define EXEC 10
-#define CLOSEDIR 11
+#define FCNTL 11
 #define GETPID 12
 #define FSTAT 13
 #define GETCWD 14
@@ -198,6 +199,14 @@ int chdir(const char *path)
 
 int fcntl(int fd, int cmd, ...)
 {
+	if(cmd==F_DUPFD)
+	{
+		va_list args;
+		va_start(args, cmd);
+		int arg=va_arg(args, int);
+		va_end(args);
+		SYSCALL3(FCNTL, fd, cmd, arg);
+	}
 	errno=EBADF;
 	return -1;
 }
