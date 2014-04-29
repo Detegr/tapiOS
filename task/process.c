@@ -153,8 +153,7 @@ struct process *find_active_process(void)
 
 int newfd(struct file *f)
 {
-	// 0, 1, 2 always reserved for now
-	for(int i=3; i<FD_MAX; ++i)
+	for(int i=0; i<FD_MAX; ++i)
 	{
 		if(current_process->fds[i] == NULL)
 		{
@@ -233,7 +232,8 @@ vaddr_t init_elf_get_entry_point(uint8_t* elf)
 	 * It is then of course also required to allocate a new page because sbrk syscall
 	 * expects to be operating in an already allocated page initially.
 	 */
-	current_process->brk=((programs[0].p_vaddr + programs[0].p_filesz) + 0x1000) & 0xFFFFF000;
+	int pentries=header.program_entries-1;
+	current_process->brk=((programs[pentries].p_vaddr + programs[pentries].p_filesz) + 0x1000) & 0xFFFFF000;
 	kalloc_page(current_process->brk, false, true);
 
 	current_process->program=elf;
