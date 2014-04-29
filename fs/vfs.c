@@ -4,42 +4,78 @@
 #include <task/process.h>
 #include <terminal/vga.h>
 
-static struct inode *walk_path(struct inode *node, const char* name)
+static inline int names_eq(const char *n1, const char *n2)
+{
+	return memcmp(n1, n2, max(strnlen(n1, 256), strnlen(n2, 256)));
+}
+
+static struct inode *walk_path_do(struct inode *node, const char *name, struct inode *(walkfunc)(struct inode *, const char *))
 {
 	if(strlen(name) == 1 && name[0] == '/') return (struct inode*)root_fs;
-
 	struct inode *wnode=node;
 	char tokname[256];
 	memcpy(tokname, name, 256);
 	char* path=strtok(tokname, '/');
 	if(path)
 	{
-		do
-		{
-			if(!wnode) return NULL;
-			struct inode *nextnode=node->i_act->search(wnode, path);
-			if(wnode!=root_fs) kfree(wnode);
-			wnode = nextnode;
-		} while((path=strtok(NULL, '/')));
+		do wnode=walkfunc(wnode, path); while((path=strtok(NULL, '/')));
 		return wnode;
 	}
 	return NULL;
+}
+
+static struct inode *searchfunc(struct inode *wnode, const char *path)
+{
+	if(!wnode) return NULL;
+	if(wnode->children)
+	{
+		struct inode *i=wnode->children;
+		struct inode *exists=NULL;
+		do
+		{
+			if(names_eq(path, i->name) == 0)
+			{
+				//kprintf("Found %s from cache\n", path);
+				exists=i;
+				break;
+			}
+		} while((i=i->siblings));
+		if(exists) return exists;
+	}
+	struct inode *nextnode=wnode->i_act->search(wnode, path);
+	if(nextnode)
+	{
+		if(!wnode->children) wnode->children=nextnode;
+		else
+		{
+			struct inode *i=wnode->children;
+			while(i->siblings) i=i->siblings;
+			i->siblings=nextnode;
+		}
+		nextnode->parent=wnode;
+	}
+	return nextnode;
 }
 
 struct inode *vfs_search(struct inode *node, const char *name)
 {
 	if(node->i_act->search)
 	{
-		return walk_path(node, name);
+		return walk_path_do(node, name, searchfunc);
 	}
 	return NULL;
 }
 
-struct inode *vfs_new_inode(struct inode *fs, const char *path)
+struct inode *vfs_new_inode(struct inode *dir, const char *path)
 {
-	if(fs->i_act->new)
+	if(dir->i_act->new)
 	{
-		return fs->i_act->new(fs, path);
+		struct inode *ret=dir->i_act->new(dir, path);
+		ret->parent=dir;
+		struct inode *i=ret->parent->children;
+		while(i->siblings) i=i->siblings;
+		i->siblings=ret;
+		return ret;
 	}
 	return NULL;
 }
@@ -95,7 +131,18 @@ int32_t vfs_close(struct file *f)
 	if(--f->refcount == 0 && f->inode)
 	{
 		if(f->inode == root_fs) return 0;
-		kfree(f->inode);
+		struct inode *i=f->inode->parent->children;
+		while(i)
+		{
+			if(i->siblings==f->inode)
+			{
+				i->siblings=f->inode->siblings;
+				kfree(f->inode);
+				f->inode=NULL;
+				break;
+			}
+			i=i->siblings;
+		}
 	}
 	return 0;
 }
@@ -115,4 +162,22 @@ int32_t vfs_stat(struct file *file, struct stat *st)
 		return file->inode->f_act->stat(file, st);
 	}
 	return -EBADF;
+}
+
+void vfs_mount(struct inode *mount, struct inode *to)
+{
+	if(to->children || !to->parent) PANIC();
+	mount->siblings=to->siblings;
+	mount->parent=to->parent;
+	mount->mountpoint=to->mountpoint;
+	strncpy(mount->name, to->name, 256);
+
+	// Add to inode tree
+	struct inode *i=to->parent->children;
+	if(i == to) to->parent->children=mount;
+	else
+	{
+		while(i->siblings != to) i=i->siblings;
+		i->siblings=mount;
+	}
 }

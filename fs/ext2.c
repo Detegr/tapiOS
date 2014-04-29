@@ -182,6 +182,9 @@ struct inode *ext2_search(struct inode *node, const char *name)
 				ret->superblock=node->superblock;
 				ret->i_act=node->i_act;
 				ret->f_act=node->f_act;
+				ret->mountpoint=node->mountpoint;
+				ret->children=NULL;
+				ret->siblings=NULL;
 				return ret;
 			}
 		}
@@ -195,7 +198,9 @@ static uint16_t calculate_dir_size(ext2_directory *d)
 	if(d->name_length_low > (sizeof(ext2_directory)-8))
 	{
 		uint16_t ret=d->name_length_low + 8;
-		ret += ret % 4;
+		// Align by 4 bytes
+		uint16_t off = (ret & 0x3);
+		if(off!=0) ret += (4-off);
 		return ret;
 	}
 	return sizeof(ext2_directory);
@@ -216,50 +221,28 @@ static void do_insert(ext2_superblock *sb, ext2_directory *dir, uint32_t inode_n
 	//kprintf("Successfully inserted\n");
 }
 
-static void insert_inode_to_directory(ext2_superblock *sb, ext2_inode *fs, uint32_t inode_no, const char *path)
+static void insert_inode_to_directory(ext2_superblock *sb, ext2_inode *fsdir, uint32_t inode_no, const char *path)
 {
-	ext2_directory *bdir, *dir;
 	// TODO: Other data blocks
-	dir=bdir=get_block(sb, fs->blocks[0]);
-
-	char fullpath[PATH_MAX];
-	strncpy(fullpath, path, PATH_MAX);
-	char *dname=dirname(fullpath);
-	char* name=strtok(dname, '/');
-	if(!name)
-	{
-		do_insert(sb, dir, inode_no, basename((char*)path));
-		return;
-	}
-	PANIC();
-	/*
-	ext2_inode *wnode=fs;
-	do
-	{
-		if(!wnode) return;
-		while(inside_dir(dir, bdir, BLOCKSIZE(sb)))
-		{
-			if(strnlen(name, 256) == dir->name_length_low &&
-				memcmp(&dir->name, name, dir->name_length_low) == 0)
-			{
-				kprintf("Found directory\n");
-				return;
-			}
-		}
-	} while((name=strtok(NULL, '/')));
-	PANIC();
-	*/
+	ext2_directory *dir=get_block(sb, fsdir->blocks[0]);
+	do_insert(sb, dir, inode_no, basename((char*)path));
 	return;
+}
+
+static int get_blockgroup_count(ext2_superblock *sb)
+{
+	if(!sb) PANIC();
+	int c1 = DIV_ROUND_UP(sb->blocks, sb->blocks_in_blockgroup);
+	int c2 = DIV_ROUND_UP(sb->inodes, sb->inodes_in_blockgroup);
+	if(c1 != c2) PANIC();
+	return c1;
 }
 
 struct inode *ext2_new_inode(struct inode *node, const char *path)
 {
 	ext2_superblock *sb=node->superblock;
-	if(!sb) PANIC();
-	int c1 = DIV_ROUND_UP(sb->blocks, sb->blocks_in_blockgroup);
-	int c2 = DIV_ROUND_UP(sb->inodes, sb->inodes_in_blockgroup);
-	if(c1 != c2) PANIC();
-	for(int blockgroup=0; blockgroup<c1; ++blockgroup)
+	int blockgroups=get_blockgroup_count(sb);
+	for(int blockgroup=0; blockgroup<blockgroups; ++blockgroup)
 	{
 		ext2_blockgroup_descriptor *desc=&get_blockgroup_descriptor_table(sb)[blockgroup];
 		if(desc->unallocated_inodes==0) continue;
@@ -289,7 +272,6 @@ struct inode *ext2_new_inode(struct inode *node, const char *path)
 		inode->size_low=0;
 		inode->size_high=0;
 		inode->fragment_size=0;
-		//DEBUG_print_inode(inode);
 		insert_inode_to_directory(sb, read_inode(sb, node->inode_no), inode_index, path);
 
 		struct inode *ret=kmalloc(sizeof(struct inode));
@@ -299,6 +281,7 @@ struct inode *ext2_new_inode(struct inode *node, const char *path)
 		ret->superblock=sb;
 		ret->i_act=node->i_act;
 		ret->f_act=node->f_act;
+		ret->mountpoint=node->mountpoint;
 		return ret;
 	}
 	kprintf("NYI: Allocate new blockgroup\n");
@@ -395,8 +378,41 @@ static int32_t ext2_read(struct file *f, void *to, uint32_t count)
 	return read_blocks(f->inode->superblock, f, to, inode->blocks, count);
 }
 
-static int32_t ext2_write(struct file *from, void *data, uint32_t count)
+static int32_t ext2_write(struct file *f, void *data, uint32_t count)
 {
+	ext2_superblock *sb=f->inode->superblock;
+	if(count > BLOCKSIZE(sb)) {kprintf("NYI");PANIC();}
+	int blockgroups=get_blockgroup_count(sb);
+	for(int blockgroup=0; blockgroup<blockgroups; ++blockgroup)
+	{
+		ext2_blockgroup_descriptor *desc=&get_blockgroup_descriptor_table(sb)[blockgroup];
+		if(desc->unallocated_blocks==0) continue;
+
+		uint32_t *block_bitmap=get_block(sb, desc->bitmap_block_no);
+		uint32_t len=BLOCKSIZE(sb)/sizeof(uint32_t);
+		int block_index=-1;
+		for(uint32_t i=0; i<len; ++i)
+		{
+			if(block_bitmap[i] != 0xFFFFFFFF)
+			{
+				GET_AND_SET_LSB(block_index, &block_bitmap[i]);
+				desc->unallocated_blocks--;
+				break;
+			}
+		}
+		ext2_inode *inode=read_inode(sb, f->inode->inode_no);
+		uint8_t *block=get_block(sb, block_index);
+		uint8_t *from=data;
+		int32_t written=0;
+		for(uint32_t i=0; i<count; ++i, ++written)
+		{
+			block[i]=from[i];
+		}
+		f->inode->size=inode->size_low=written;
+		f->pos=written;
+		inode->blocks[0]=block_index;
+		return written;
+	}
 	return -1;
 }
 
@@ -445,6 +461,11 @@ struct inode *ext2_fs_init(uint8_t *fs_data)
 	ret->f_act->read=&ext2_read;
 	ret->f_act->write=&ext2_write;
 	ret->f_act->stat=&ext2_stat;
+	ret->mountpoint=ret;
+	ret->parent=NULL;
+	ret->children=NULL;
+	ret->siblings=NULL;
+
 	print_startup_info("ext2", true);
 	return ret;
 }

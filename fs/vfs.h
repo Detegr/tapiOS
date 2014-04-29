@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <limits.h>
 
 struct inode_actions;
 
@@ -16,6 +17,12 @@ struct inode
 	void *superblock;
 	struct inode_actions *i_act;
 	struct file_actions *f_act;
+
+	struct inode *mountpoint;
+
+	struct inode *parent;
+	struct inode *children;
+	struct inode *siblings;
 };
 
 struct file
@@ -53,5 +60,6 @@ int32_t vfs_write(struct file *file, void *data, uint32_t count);
 int32_t vfs_stat(struct file *file, struct stat *st);
 int32_t vfs_close(struct file *f);
 struct dirent *vfs_readdir(int dirfd);
+void vfs_mount(struct inode *mount, struct inode *to);
 
 #endif
