@@ -65,109 +65,16 @@ int _exit(int code)
 
 int _read(int fd, uint8_t* to, uint32_t count)
 {
-	if(fd>2)
-	{
-		struct file *f=current_process->fds[fd];
-		if(!f) PANIC();
-		return vfs_read(f, to, count);
-	}
-	if(count==0) return 0;
-	struct process* p=find_active_process();
-	if(!p) PANIC();
-	memset(p->keybuf, 0, 256);
-	uint32_t bufptr=0;
-	for(int i=0; i<256; ++i)
-	{
-		if(p->stdoutbuf[i] == 0)
-		{
-			bufptr=i;
-			break;
-		}
-	}
-	uint32_t j=0;
-	if(bufptr>0)
-	{
-		if(bufptr>count)
-		{
-			memcpy(to, p->stdoutbuf, count);
-			memmove(p->stdoutbuf, p->stdoutbuf+count, 256-count);
-			return count;
-		}
-		else
-		{
-			memcpy(to, p->stdoutbuf, count);
-			memset(p->stdoutbuf, 0, 256);
-			return count;
-		}
-	}
-	int prevkp=p->keyp;
-	int row=get_cursor_row();
-	int col=get_cursor_col();
-	update_cursor();
-	while(true)
-	{
-		prevkp=p->keyp;
-		__asm__ volatile("sti;hlt");
-		if(p->keyp-prevkp == 0) continue;
-		for(int i=prevkp; i<=p->keyp; ++i)
-		{
-			char c=char_for_scancode(p->keybuf[i]);
-			if(c==CHAR_UP || c==CHAR_UNHANDLED) continue;
-			else if(c==CHAR_BACKSPACE) delete_last_char(row, col);
-			else kprintc(c);
-			update_cursor();
-			if(c=='\n') goto done;
-		}
-	}
-done:
-	hide_cursor();
-	int i=0;
-	for(i=0; i<p->keyp; ++i)
-	{
-		char c=char_for_scancode(p->keybuf[i]);
-		if(c==CHAR_UNHANDLED || c==CHAR_UP) continue;
-		else if(c=='\n')
-		{
-			p->stdoutbuf[bufptr++]=c;
-			break;
-		}
-		else if(c==CHAR_BACKSPACE)
-		{
-			if(bufptr==0) continue;
-			p->stdoutbuf[bufptr--]=0;
-		}
-		else
-		{
-			p->stdoutbuf[bufptr++]=c;
-		}
-	}
-	for(j=0; j<bufptr; ++j)
-	{
-		if(j==count) break;
-		to[j]=p->stdoutbuf[j];
-	}
-	memmove(p->keybuf, p->keybuf+i, 256-i);
-	p->keyp-=i;
-	memset(p->keybuf+i, 0, 256-i);
-	memmove(p->stdoutbuf, p->stdoutbuf+j, 256-j);
-	return j;
+	struct file *f=current_process->fds[fd];
+	if(!f) PANIC();
+	return vfs_read(f, to, count);
 }
 
-int _write(int fd, uint8_t* to, uint32_t size)
+int _write(int fd, uint8_t* to, uint32_t count)
 {
-	if(fd<=2)
-	{
-		char* str=(char*)to;
-		for(uint32_t i=0; i<size; ++i)
-		{
-			kprintc(str[i]);
-		}
-		return size;
-	}
-	else
-	{
-		return -EBADF;
-	}
+	struct file *f=current_process->fds[fd];
+	if(!f) PANIC();
+	return vfs_write(f, to, count);
 }
 
 void* _sbrk(int32_t increment)
@@ -213,7 +120,11 @@ int _open(const char* path, int flags)
 	struct inode *inode=vfs_search((struct inode*)root_fs, path);
 	if(inode && (flags & (O_CREAT|O_EXCL))) return -EEXIST;
 	int status;
-	if(!inode && (flags & O_CREAT)) inode=vfs_new_inode((struct inode*)root_fs, path);
+	char *dirpath=strndup(path, PATH_MAX);
+	struct inode *dir=vfs_search((struct inode*)root_fs, dirname(dirpath));
+	kfree(dirpath);
+	if(!dir) return -ENOENT;
+	if(!inode && (flags & O_CREAT)) inode=vfs_new_inode(dir, path);
 	if(!inode) return -ENOENT;
 	struct file *f=vfs_open(inode, &status, flags);
 	if(!f) return status;

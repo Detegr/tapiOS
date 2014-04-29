@@ -1,9 +1,14 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/wait.h>
+#include <fcntl.h>
 
 int main()
 {
+	open("/dev/keyboard", O_RDONLY);
+	open("/dev/terminal", O_WRONLY);
+	open("/dev/terminal", O_WRONLY);
+
 	printf("tapiOS init\n");
 	int pid=fork();
 	if(pid == 0)

@@ -12,10 +12,13 @@
 #include <task/tss.h>
 #include <syscall/syscalls.h>
 #include <fs/vfs.h>
+#include <fs/devfs.h>
 #include <fs/ext2.h>
 #include <task/multitasking.h>
 #include <task/processtree.h>
 #include <fcntl.h>
+#include <drivers/tty.h>
+#include <drivers/keyboard.h>
 
 #define KERNEL_VMA 0xC0000000
 
@@ -72,6 +75,15 @@ void kmain(struct multiboot* b, uint32_t magic)
 	b=(struct multiboot*)((uint8_t*)b+KERNEL_VMA);
 	uint32_t mods_addr=*(uint32_t*)(b->mods_addr + KERNEL_VMA) + KERNEL_VMA;
 	root_fs=ext2_fs_init((uint8_t*)mods_addr);
+	struct inode *devfs=devfs_init();
+	struct inode *devfs_root=vfs_search((struct inode*)root_fs, "/dev");
+	if(devfs_root)
+	{
+		vfs_mount(devfs, devfs_root);
+		register_tty_driver();
+		register_kbd_driver();
+	}
+	else kprintf("Could not mount /dev, no such directory\n");
 
 	kprintf("\n%@Welcome to tapiOS!%@\n\n", 0x05, 0x07, b->mods_count, 0x03);
 
