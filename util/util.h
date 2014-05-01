@@ -44,6 +44,7 @@ int strncmp(const char *lhs, const char *rhs, uint32_t n);
 int strlen(const char* str);
 int strnlen(const char* str, uint32_t n);
 char *strndup(const char *str, uint32_t len);
+char *strdup(const char *str);
 char *strtok(char *str, const char delim);
 char *basename(char *path); /* GNU version */
 char *dirname(char *path);

@@ -132,6 +132,14 @@ char *strndup(const char *str, uint32_t len)
 	return ret;
 }
 
+char *strdup(const char *str)
+{
+	int len=strlen(str);
+	char *ret=kmalloc(len+1);
+	strncpy(ret, str, len);
+	return ret;
+}
+
 char *strtok(char *str, const char delim)
 {
 	static char *lastp=NULL;
