@@ -250,7 +250,8 @@ int _exec(const char *path, char **const argv, char **const envp)
 	char **envp_copy=NULL;
 	if(envc>0)
 	{
-		envp_copy=(char**)current_process->brk;
+		current_process->brk+=0x1000;
+		envp_copy=(char**)kalloc_page(current_process->brk, false, true);
 		for(int i=0; i<envc; ++i)
 		{
 			change_pdir(old_pdir);
