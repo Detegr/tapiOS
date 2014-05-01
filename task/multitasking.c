@@ -42,7 +42,7 @@ void free_process_stack(vptr_t *stack)
 void setup_initial_process(vaddr_t entry_point)
 {
 	vptr_t *stack=setup_process_stack();
-	vptr_t *stack_top=setup_usermode_stack(entry_point, 0, NULL, stack + STACK_SIZE);
+	vptr_t *stack_top=setup_usermode_stack(entry_point, 0, NULL, NULL, stack + STACK_SIZE);
 
 	__asm__ volatile("cli");
 	current_process->user_stack=stack;

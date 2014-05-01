@@ -49,6 +49,9 @@ int _exit(int code)
 			current_process->fds[i]=0;
 		}
 	}
+
+	// TODO: Free environment
+
 	kfree(current_process->program);
 	kfree(current_process->pdir);
 	kfree(current_process->esp0);
@@ -207,6 +210,9 @@ int _exec(const char *path, char **const argv, char **const envp)
 	page_directory *old_pdir=current_process->pdir;
 	page_directory *pdir=new_page_directory_from(old_pdir);
 
+	int envc=0;
+	if(envp) for(char **ep=envp; *ep; ++ep, ++envc) {}
+
 	// Old process stack is in old_pdir and will be freed later on
 	change_pdir(pdir);
 	current_process->pdir=pdir;
@@ -230,23 +236,47 @@ int _exec(const char *path, char **const argv, char **const envp)
 		change_pdir(old_pdir);
 		int len=strlen(argv[i])+1;
 		char str[len];
-		memcpy(str, argv[i], len);
+		strncpy(str, argv[i], len);
 		change_pdir(pdir);
 
 		// TODO: Calculate this in a reasonable way...
 		current_process->brk+=0x1000;
 		argv_copy[i]=(char*)kalloc_page(current_process->brk, false, true);
 
-		memcpy(argv_copy[i], str, len);
+		strncpy(argv_copy[i], str, len);
+	}
+	argv_copy[argc]=NULL;
+
+	char **envp_copy=NULL;
+	if(envc>0)
+	{
+		envp_copy=(char**)current_process->brk;
+		for(int i=0; i<envc; ++i)
+		{
+			change_pdir(old_pdir);
+			int len=0;
+			len=strlen(envp[i])+1;
+			char str[len];
+			strncpy(str, envp[i], len);
+			change_pdir(pdir);
+
+			// TODO: Calculate this in a reasonable way...
+			current_process->brk+=0x1000;
+			envp_copy[i]=(char*)kalloc_page(current_process->brk, false, true);
+
+			strncpy(envp_copy[i], str, len);
+		}
+		envp_copy[envc]=NULL;
 	}
 	kfree(old_pdir);
 
+	current_process->envp=envp_copy;
+
 	setcwd_dirname((struct process*)current_process, argv_copy[0]);
-	argv_copy[argc]=NULL;
 	current_process->brk+=0x1000;
 	kalloc_page(current_process->brk, false, true);
 
-	vptr_t *stack_top=setup_usermode_stack(entry, argc, argv_copy, current_process->user_stack + STACK_SIZE);
+	vptr_t *stack_top=setup_usermode_stack(entry, argc, argv_copy, envp_copy, current_process->user_stack + STACK_SIZE);
 
 	__asm__ volatile("mov esp, %0; jmp %1" :: "r"(stack_top), "r"((uint32_t)_return_to_userspace));
 

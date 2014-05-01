@@ -164,7 +164,7 @@ int newfd(struct file *f)
 	return -1;
 }
 
-vptr_t *setup_usermode_stack(vaddr_t entry_point, int argc, char **const argv, vptr_t *stack_top_ptr)
+vptr_t *setup_usermode_stack(vaddr_t entry_point, int argc, char **const argv, char **const envp, vptr_t *stack_top_ptr)
 {
 	uint32_t *stack_top=(uint32_t*)stack_top_ptr;
 
@@ -181,6 +181,7 @@ vptr_t *setup_usermode_stack(vaddr_t entry_point, int argc, char **const argv, v
 
 	if(argv) PUSH(argv);
 	if(argc) PUSH(argc);
+	PUSH(envp);
 
 	// 0x3 is the user privilege level
 	PUSH(USER_DATA_SEGMENT | 0x3);
