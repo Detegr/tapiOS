@@ -211,13 +211,14 @@ static void do_insert(ext2_superblock *sb, ext2_directory *dir, uint32_t inode_n
 	advance_to_last(&dir, BLOCKSIZE(sb));
 	uint16_t oldsize=dir->size;
 	dir->size=calculate_dir_size(dir);
+	uint16_t newsize=dir->size;
 	advance(&dir);
 	int namelen=strnlen(name, 256);
 	strncpy((char*)&dir->name, name, namelen+1);
-	dir->name_length_high=0;
+	dir->type_indicator=2;
 	dir->name_length_low=namelen;
 	dir->inode=inode_no;
-	dir->size=oldsize-calculate_dir_size(dir);
+	dir->size=oldsize-newsize;
 	//kprintf("Successfully inserted\n");
 }
 
@@ -265,7 +266,7 @@ struct inode *ext2_new_inode(struct inode *node, const char *path)
 			PANIC();
 		}
 		//kprintf("Found free inode: %d\n", inode_index);
-		ext2_inode *inode=&((ext2_inode*)(get_block(sb, desc->inode_table_block)))[inode_index];
+		ext2_inode *inode=read_inode(sb, inode_index);
 		memset(inode, 0, sizeof(ext2_inode));
 		inode->type_and_permissions=0x8000;
 		inode->hard_link_count=1;
@@ -394,8 +395,11 @@ static int32_t ext2_write(struct file *f, void *data, uint32_t count)
 		for(uint32_t i=0; i<len; ++i)
 		{
 			if(block_bitmap[i] != 0xFFFFFFFF)
-			{
+			{// TODO: This still does not work correctly
+				//kprintf("%x\n", block_bitmap[i]);
 				GET_AND_SET_LSB(block_index, &block_bitmap[i]);
+				if(block_index==32) continue;
+				//kprintf("%x\n", block_bitmap[i]);
 				desc->unallocated_blocks--;
 				break;
 			}
