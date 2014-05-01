@@ -81,12 +81,17 @@ void* _sbrk(int32_t increment)
 {
 	if(increment==0) return (void*)current_process->brk;
 
+	uint32_t oldbrk=current_process->brk;
 	uint32_t newbrk=current_process->brk+increment;
 	int diff=newbrk-current_process->brk;
 	if(diff == 0) return (void*)current_process->brk;
 
 	int pagediff=(newbrk/0x1000)-(current_process->brk/0x1000);
-	if(pagediff == 0) return (void*)current_process->brk;
+	if(pagediff == 0)
+	{
+		current_process->brk=newbrk;
+		return (void*)oldbrk;
+	}
 
 	if(diff>0)
 	{
@@ -102,7 +107,6 @@ void* _sbrk(int32_t increment)
 			kfree_page(current_process->brk + (i * 0x1000));
 		}
 	}
-	uint32_t oldbrk=current_process->brk;
 	current_process->brk=newbrk;
 	return (void*)oldbrk;
 }
