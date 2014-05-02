@@ -10,6 +10,7 @@
 #include <stdarg.h>
 
 #include "sys/dirent.h"
+#include "sys/termios.h"
 
 #define EXIT 1
 #define WRITE 2
@@ -59,6 +60,66 @@ struct DIR
 {
 	int dir_fd;
 };
+
+char *getlogin(void)
+{
+	return NULL;
+}
+
+unsigned int sleep(unsigned int seconds)
+{
+	return -1;
+}
+
+long fpathconf(int fd, int name)
+{
+	return -1;
+}
+
+char *ttyname(int fd)
+{
+	return NULL;
+}
+
+int gettimeofday(struct timeval *tv, void *tz)
+{
+	return -1;
+}
+
+int tcgetattr(int fd, struct termios *termios_p)
+{
+	return -1;
+}
+
+int tcsetattr(int fd, int optional_actions, const struct termios *termios_p)
+{
+	return -1;
+}
+
+int tcflush(int fd, int queue_selector)
+{
+	return -1;
+}
+
+speed_t cfgetospeed(const struct termios *termios_p)
+{
+	return -1;
+}
+
+int mkdir(const char *pathname, mode_t mode)
+{
+	return -1;
+}
+
+int unlink(const char *pathname)
+{
+	return -1;
+}
+
+int access(const char *pathname, int mode)
+{
+	return 0;
+}
 
 void _exit()
 {
@@ -119,7 +180,6 @@ int stat(const char *path, struct stat *st)
 	return ret;
 }
 clock_t times(struct tms *buf);
-int unlink(char *name);
 int write(int file, char *ptr, int len)
 {
 	SYSCALL3(WRITE, file, ptr, len);
