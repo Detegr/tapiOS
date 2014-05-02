@@ -94,9 +94,7 @@ void* _sbrk(int32_t increment)
 		current_process->brk=newbrk;
 		return (void*)oldbrk;
 	}
-
-	int diff=newbrk-oldbrk;
-	if(diff>0)
+	else if(pagediff>0)
 	{
 		for(int i=1; i<=pagediff; ++i)
 		{// Allocate 'pagediff' pages to the end of current brk
@@ -105,7 +103,7 @@ void* _sbrk(int32_t increment)
 	}
 	else
 	{
-		for(int i=1; i<=pagediff; ++i)
+		for(int i=1; i<=-pagediff; ++i)
 		{// Free 'pagediff' pages from the end of current brk
 			kfree_page(oldbrk + (i * 0x1000));
 		}
