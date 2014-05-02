@@ -82,32 +82,32 @@ int _write(int fd, uint8_t* to, uint32_t count)
 
 void* _sbrk(int32_t increment)
 {
+	if(increment<0) PANIC();
 	if(increment==0) return (void*)current_process->brk;
 
 	uint32_t oldbrk=current_process->brk;
-	uint32_t newbrk=current_process->brk+increment;
-	int diff=newbrk-current_process->brk;
-	if(diff == 0) return (void*)current_process->brk;
+	uint32_t newbrk=(current_process->brk+increment+7) & ~7;
 
-	int pagediff=(newbrk/0x1000)-(current_process->brk/0x1000);
+	int pagediff=(newbrk/0x1000)-(oldbrk/0x1000);
 	if(pagediff == 0)
 	{
 		current_process->brk=newbrk;
 		return (void*)oldbrk;
 	}
 
+	int diff=newbrk-oldbrk;
 	if(diff>0)
 	{
 		for(int i=1; i<=pagediff; ++i)
 		{// Allocate 'pagediff' pages to the end of current brk
-			kalloc_page((current_process->brk + (i * 0x1000)) & 0xFFFFF000, false, true);
+			kalloc_page(oldbrk + (i * 0x1000), false, true);
 		}
 	}
 	else
 	{
 		for(int i=1; i<=pagediff; ++i)
 		{// Free 'pagediff' pages from the end of current brk
-			kfree_page(current_process->brk + (i * 0x1000));
+			kfree_page(oldbrk + (i * 0x1000));
 		}
 	}
 	current_process->brk=newbrk;
@@ -229,8 +229,7 @@ int _exec(const char *path, char **const argv, char **const envp)
 	}
 	vaddr_t entry=init_elf_get_entry_point(prog);
 
-	// TODO: This current_process->brk fiddling is ugly.
-	char **argv_copy=(char**)current_process->brk;
+	char **argv_copy=(char**)_sbrk(sizeof(char*) * (argc+1));
 	for(int i=0; i<argc; ++i)
 	{
 		change_pdir(old_pdir);
@@ -239,10 +238,7 @@ int _exec(const char *path, char **const argv, char **const envp)
 		strncpy(str, argv[i], len);
 		change_pdir(pdir);
 
-		// TODO: Calculate this in a reasonable way...
-		current_process->brk+=0x1000;
-		argv_copy[i]=(char*)kalloc_page(current_process->brk, false, true);
-
+		argv_copy[i]=(char*)_sbrk(len);
 		strncpy(argv_copy[i], str, len);
 	}
 	argv_copy[argc]=NULL;
@@ -250,8 +246,7 @@ int _exec(const char *path, char **const argv, char **const envp)
 	char **envp_copy=NULL;
 	if(envc>0)
 	{
-		current_process->brk+=0x1000;
-		envp_copy=(char**)kalloc_page(current_process->brk, false, true);
+		envp_copy=(char**)_sbrk(sizeof(char*) * (envc+1));
 		for(int i=0; i<envc; ++i)
 		{
 			change_pdir(old_pdir);
@@ -261,10 +256,7 @@ int _exec(const char *path, char **const argv, char **const envp)
 			strncpy(str, envp[i], len);
 			change_pdir(pdir);
 
-			// TODO: Calculate this in a reasonable way...
-			current_process->brk+=0x1000;
-			envp_copy[i]=(char*)kalloc_page(current_process->brk, false, true);
-
+			envp_copy[i]=(char*)_sbrk(len);
 			strncpy(envp_copy[i], str, len);
 		}
 		envp_copy[envc]=NULL;
@@ -272,10 +264,7 @@ int _exec(const char *path, char **const argv, char **const envp)
 	kfree(old_pdir);
 
 	current_process->envp=envp_copy;
-
 	setcwd_dirname((struct process*)current_process, argv_copy[0]);
-	current_process->brk+=0x1000;
-	kalloc_page(current_process->brk, false, true);
 
 	vptr_t *stack_top=setup_usermode_stack(entry, argc, argv_copy, envp_copy, current_process->user_stack + STACK_SIZE);
 
