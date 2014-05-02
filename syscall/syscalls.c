@@ -10,6 +10,8 @@
 #include <task/processtree.h>
 #include <task/scheduler.h>
 #include <sys/fcntl.h>
+#include <sys/ioctl.h>
+#include <sys/termios.h>
 
 extern void _return_from_exec(void);
 extern void _return_to_userspace(void);
@@ -28,13 +30,14 @@ int _chdir(char *path);
 int _close(int fd);
 int _dup2(int oldfd, int newfd);
 int _fcntl(int fd, int cmd, int arg);
+int _ioctl(int fd, int req, void *argp);
 
 typedef int(*syscall_ptr)();
 syscall_ptr syscalls[]={
 	&_exit, &_write, &_read, (syscall_ptr)&_sbrk,
 	&_open, &_dup2, &_readdir,
 	&fork, &_waitpid, &_exec, &_fcntl, &getpid, &_fstat,
-	&_getcwd, &_chdir, &_close
+	&_getcwd, &_chdir, &_close, &_ioctl
 };
 
 int _exit(int code)
@@ -338,6 +341,19 @@ int _fcntl(int fd, int cmd, int arg)
 			}
 		}
 		return -EMFILE;
+	}
+	return -EINVAL;
+}
+
+int _ioctl(int fd, int req, void *argp)
+{
+	switch(req)
+	{
+		case TCGETATTR:
+		{
+			struct termios *t=argp;
+			return 0;
+		}
 	}
 	return -EINVAL;
 }

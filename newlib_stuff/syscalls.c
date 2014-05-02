@@ -11,6 +11,7 @@
 
 #include "sys/dirent.h"
 #include "sys/termios.h"
+#include "sys/ioctl.h"
 
 #define EXIT 1
 #define WRITE 2
@@ -28,6 +29,7 @@
 #define GETCWD 14
 #define CHDIR 15
 #define CLOSE 16
+#define IOCTL 17
 
 #define SYSCALL0(n) \
 	int ret; \
@@ -82,11 +84,6 @@ char *ttyname(int fd)
 }
 
 int gettimeofday(struct timeval *tv, void *tz)
-{
-	return -1;
-}
-
-int tcgetattr(int fd, struct termios *termios_p)
 {
 	return -1;
 }
@@ -269,6 +266,28 @@ int fcntl(int fd, int cmd, ...)
 	}
 	errno=EBADF;
 	return -1;
+}
+
+int ioctl(int fd, int request, ...)
+{
+	va_list args;
+	va_start(args, request);
+	switch(request)
+	{
+		case TCGETATTR:
+		{
+			struct termios *t=va_arg(args, struct termios*);
+			SYSCALL3(IOCTL, fd, request, t);
+		}
+	}
+	va_end(args);
+	errno=EINVAL;
+	return -1;
+}
+
+int tcgetattr(int fd, struct termios *t)
+{
+	ioctl(fd, TCGETATTR, t);
 }
 
 uid_t geteuid(void)
