@@ -219,6 +219,8 @@ vaddr_t init_elf_get_entry_point(uint8_t* elf)
 	elf_program_entry* programs=(elf_program_entry*)(elf+header.program_table);
 	elf_section_entry* sections=(elf_section_entry*)(elf+header.section_table);
 
+	int bss_start=0;
+	int bss_end=0;
 	for(int i=0; i<header.program_entries; ++i)
 	{
 		int page_offset_from_elf=programs[i].p_offset / 0x1000;
@@ -226,6 +228,8 @@ vaddr_t init_elf_get_entry_point(uint8_t* elf)
 		{
 			kalloc_page_from(vaddr_to_physaddr((vaddr_t)elf + (page_offset_from_elf * 0x1000) + (j*0x1000)), programs[i].p_vaddr + (j*0x1000), false, true);
 		}
+		bss_start+=programs[i].p_vaddr + programs[i].p_filesz;
+		bss_end+=programs[i].p_vaddr + programs[i].p_memsz;
 	}
 
 	/* It seems like newlib wants the initial brk to be page aligned
@@ -233,9 +237,17 @@ vaddr_t init_elf_get_entry_point(uint8_t* elf)
 	 * It is then of course also required to allocate a new page because sbrk syscall
 	 * expects to be operating in an already allocated page initially.
 	 */
-	int pentries=header.program_entries-1;
-	current_process->brk=((programs[pentries].p_vaddr + programs[pentries].p_filesz) + 0x1000) & 0xFFFFF000;
+
+	/* This page is for bss */
+	current_process->brk=(bss_start + 0x1000) & 0xFFFFF000;
 	kalloc_page(current_process->brk, false, true);
+
+	/* Assign process brk to page after bss */
+	if(current_process->brk != ((bss_end + 0x1000) & 0xFFFFF000))
+	{
+		current_process->brk=(bss_end + 0x1000) & 0xFFFFF000;
+		kalloc_page(current_process->brk, false, true);
+	}
 
 	current_process->program=elf;
 	return header.entry;
