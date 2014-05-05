@@ -1,6 +1,7 @@
 #include "util.h"
 #include <terminal/vga.h>
 #include <mem/kmalloc.h>
+#include <stdarg.h>
 
 extern void _outb(uint16_t dest, uint8_t src);
 extern void _outw(uint16_t dest, uint16_t src);
@@ -95,13 +96,10 @@ char *strncpy(char *dst, const char *src, uint32_t n)
 
 int strncmp(const char *lhs, const char *rhs, uint32_t n)
 {
-	const char *p=lhs;
-	const char *pp=rhs;
-	while(*p && *pp && n>0)
+	for(const char *p=lhs, *pp=rhs; n>0; --n, ++p, ++pp)
 	{
 		if(*p < *pp) return -1;
 		if(*p > *pp) return 1;
-		n--;
 	}
 	return 0;
 }
@@ -200,4 +198,72 @@ char *dirname(char *path)
 inline int max(int a, int b)
 {
 	return a > b ? a : b;
+}
+
+inline int isdigit(const char c)
+{
+	return c >= 48 && c <= 57;
+}
+
+int katoi(const char *str)
+{// Yuck this function
+	int ret=0;
+	int len=strlen(str)-1;
+	int digits[len+1];
+	for(int i=len, j=0; i>=0; --i, ++j)
+	{
+		if(isdigit(str[i]))
+		{
+			digits[i] = str[i] - 48;
+		}
+		else return -1;
+	}
+	for(int i=0; i<len+1; ++i)
+	{
+		int val=digits[i];
+		for(int j=0; j<len-i; ++j)
+		{// Yuck this pow
+			val *= 10;
+		}
+		ret += val;
+	}
+	return ret;
+}
+
+int ksscanf(const char *str, const char *fmt, char **outstr, ...)
+{
+	int elems=0;
+	va_list args;
+	va_start(args, outstr);
+	const char *sp=str;
+	for(const char *p=fmt; *p; ++p)
+	{
+		if(*p == '%')
+		{
+			switch(*(++p))
+			{
+				case 'u':
+				{
+					int digits;
+					unsigned int *ret=va_arg(args, unsigned int*);
+					const char *spp=sp;
+					for(digits=0; sp && isdigit(*sp); ++sp) digits++;
+					char buf[digits+1];
+					for(int i=0; i<digits; ++i) buf[i]=spp[i];
+					buf[digits]=0;
+					*ret = katoi(buf);
+					++elems;
+				}
+			}
+		}
+		else
+		{
+			if(*p != *sp) {outstr=NULL; return 0;}
+			else ++sp;
+		}
+	}
+	va_end(args);
+	if(outstr) *outstr=(char*)sp;
+
+	return elems;
 }
