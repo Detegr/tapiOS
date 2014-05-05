@@ -5,7 +5,7 @@
 
 int main()
 {
-	open("/dev/keyboard", O_RDONLY);
+	open("/dev/terminal", O_RDONLY);
 	open("/dev/terminal", O_WRONLY);
 	open("/dev/terminal", O_WRONLY);
 
