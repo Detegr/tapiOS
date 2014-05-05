@@ -9,16 +9,36 @@ static uint8_t row=25;
 
 void hide_cursor(void)
 {
-	set_cursor(100, 100);
-}
-
-void set_cursor(uint8_t row, uint8_t col)
-{
-	uint16_t pos=(row*80) + col;
+	uint16_t pos=(100*80) + 200;
 	outb(0x3D4, 15); // Number of col register on vga controller
 	outb(0x3D5, pos & 0xFF); // Low byte of pos
 	outb(0x3D4, 14); // Number of col register on vga controller
 	outb(0x3D5, (pos >> 8) & 0xFF); // High byte of pos
+}
+
+void move_cursor(uint8_t rows, uint8_t cols)
+{
+	uint16_t pos=(row * 80) + (rows * 80) + col + (cols * 2);
+	outb(0x3D4, 15); // Number of col register on vga controller
+	outb(0x3D5, pos & 0xFF); // Low byte of pos
+	outb(0x3D4, 14); // Number of col register on vga controller
+	outb(0x3D5, (pos >> 8) & 0xFF); // High byte of pos
+	row=row+rows; col+=(cols*2);
+	if(col > 160)
+	{
+		row++;
+		col = col % 160;
+	}
+}
+
+void set_cursor(uint8_t newrow, uint8_t newcol)
+{
+	uint16_t pos=(newrow*80) + newcol;
+	outb(0x3D4, 15); // Number of col register on vga controller
+	outb(0x3D5, pos & 0xFF); // Low byte of pos
+	outb(0x3D4, 14); // Number of col register on vga controller
+	outb(0x3D5, (pos >> 8) & 0xFF); // High byte of pos
+	row=newrow; col=newcol*2;
 }
 
 void cls(void)
@@ -35,8 +55,21 @@ void cls(void)
 	col=row=0;
 }
 
+void cls_from_cursor_down(void)
+{
+	for(int y=row; y<50; ++y)
+	{
+		for(int x=col; x<160; x+=2)
+		{
+			*(video+(y*160)+x)=' ';
+			*(video+(y*160)+x+1)=0x07;
+		}
+	}
+}
+
 static void printchar(const char c, uint8_t color)
 {
+	if(!c) return;
 	if(c=='\n')
 	{
 		col=0;
