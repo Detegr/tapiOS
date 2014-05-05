@@ -5,7 +5,7 @@
 #include <util/util.h>
 
 #define BITMAP_SIZE 32768
-typedef unsigned long physaddr_t;
+typedef uintptr_t physaddr_t;
 
 uint32_t bitmap[BITMAP_SIZE];
 

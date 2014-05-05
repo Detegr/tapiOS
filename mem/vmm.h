@@ -6,7 +6,7 @@
 #include "pmm.h"
 
 typedef unsigned char vptr_t;
-typedef unsigned long vaddr_t;
+typedef uintptr_t vaddr_t;
 
 typedef struct page_directory_entry
 {
@@ -19,7 +19,7 @@ typedef struct page_directory_entry
 		} __attribute__((packed));
 		uint32_t as_uint32;
 	};
-} __attribute__((packed)) page_directory_entry ;
+} __attribute__((packed)) page_directory_entry;
 
 typedef uint32_t page_table_entry;
 typedef struct page_table
