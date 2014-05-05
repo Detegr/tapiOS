@@ -181,3 +181,12 @@ void vfs_mount(struct inode *mount, struct inode *to)
 		i->siblings=mount;
 	}
 }
+
+int32_t vfs_ioctl(struct file *f, int cmd, void *arg)
+{
+	if(f->inode->f_act->ioctl)
+	{
+		return f->inode->f_act->ioctl(f, cmd, arg);
+	}
+	return -EBADF;
+}

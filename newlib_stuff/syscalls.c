@@ -88,11 +88,6 @@ int gettimeofday(struct timeval *tv, void *tz)
 	return -1;
 }
 
-int tcsetattr(int fd, int optional_actions, const struct termios *termios_p)
-{
-	return -1;
-}
-
 int tcflush(int fd, int queue_selector)
 {
 	return -1;
@@ -275,6 +270,7 @@ int ioctl(int fd, int request, ...)
 	switch(request)
 	{
 		case TCGETATTR:
+		case TCSETATTR:
 		{
 			struct termios *t=va_arg(args, struct termios*);
 			SYSCALL3(IOCTL, fd, request, t);
@@ -288,6 +284,11 @@ int ioctl(int fd, int request, ...)
 int tcgetattr(int fd, struct termios *t)
 {
 	ioctl(fd, TCGETATTR, t);
+}
+
+int tcsetattr(int fd, int optional_actions, const struct termios *t)
+{
+	ioctl(fd, TCSETATTR, t);
 }
 
 uid_t geteuid(void)

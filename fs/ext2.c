@@ -467,6 +467,7 @@ struct inode *ext2_fs_init(uint8_t *fs_data)
 	ret->f_act->read=&ext2_read;
 	ret->f_act->write=&ext2_write;
 	ret->f_act->stat=&ext2_stat;
+	ret->f_act->ioctl=NULL;
 	ret->mountpoint=ret;
 	ret->parent=NULL;
 	ret->children=NULL;

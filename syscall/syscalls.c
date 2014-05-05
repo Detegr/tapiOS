@@ -350,9 +350,13 @@ int _ioctl(int fd, int req, void *argp)
 	switch(req)
 	{
 		case TCGETATTR:
+		case TCSETATTR:
 		{
 			struct termios *t=argp;
-			return 0;
+			// TODO: isatty check
+			struct file *f=current_process->fds[fd];
+			if(!f) return -EBADF;
+			return vfs_ioctl(f, req, argp);
 		}
 	}
 	return -EINVAL;
