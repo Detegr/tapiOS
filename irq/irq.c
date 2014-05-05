@@ -6,6 +6,7 @@
 #include <task/process.h>
 #include <syscall/syscalls.h>
 #include <stdint.h>
+#include <drivers/keyboard.h>
 
 void timer_handler(void)
 {
@@ -56,13 +57,12 @@ void irq1_handler(void)
 		uint8_t scancode=inb(0x60);
 		struct process* p=find_active_process();
 		if(!p) return; // No active userspace process, nothing to do
-		p->keybuf[p->keyp++]=scancode;
+		char c=char_for_scancode(scancode);
+		if(c==CHAR_UNHANDLED||c==CHAR_UP) return;
+		kbd_buffer_push(c);
 	}
-	/*
-	uint8_t i=inb(0x61);
-	outb(0x61, i);
-	*/
 }
+
 void page_fault(int errno)
 {
 	vaddr_t addr;
