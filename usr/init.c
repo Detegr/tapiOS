@@ -13,10 +13,11 @@ int main()
 	int pid=fork();
 	if(pid == 0)
 	{
-		char *argv[2];
+		char *argv[3];
 		char *cmd="/bin/dash";
 		argv[0]=cmd;
-		argv[1]=NULL;
+		argv[1]="-l";
+		argv[2]=NULL;
 		execve(cmd, argv, NULL);
 	}
 	else
