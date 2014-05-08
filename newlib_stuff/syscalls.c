@@ -3,6 +3,7 @@
 #include <sys/fcntl.h>
 #include <sys/times.h>
 #include <sys/time.h>
+#include <sys/poll.h>
 #include <errno.h>
 #include <stdio.h>
 #include <signal.h>
@@ -62,6 +63,11 @@ struct DIR
 {
 	int dir_fd;
 };
+
+int poll(struct pollfd *fds, nfds_t nfds, int timeout)
+{
+	return -1;
+}
 
 char *getlogin(void)
 {
@@ -142,7 +148,6 @@ int kill(int pid, int sig)
 {
 	return -1;
 }
-int link(char *old, char *new);
 int lseek(int file, int ptr, int dir)
 {
 	return -1;
@@ -214,6 +219,41 @@ int fork(void)
 	SYSCALL0(FORK);
 }
 
+int gethostname(char *name, size_t len)
+{
+	return -1;
+}
+
+int chmod(const char *path, mode_t mode)
+{
+	return -1;
+}
+
+long sysconf(int name)
+{
+	return -1L;
+}
+
+int rmdir(const char *path)
+{
+	return -1;
+}
+
+int link(const char *from, const char *to)
+{
+	return -1;
+}
+
+void sync(void)
+{
+	return;
+}
+
+pid_t waitpid(pid_t pid, int *status, int options)
+{
+	SYSCALL3(WAITPID, pid, status, options);
+}
+
 pid_t wait(int *status)
 {
 	SYSCALL3(WAITPID, -1, status, 0);
@@ -224,6 +264,13 @@ pid_t wait3(int *status, int options, struct rusage *rusage)
 	SYSCALL3(WAITPID, -1, status, options);
 }
 
+int execvp(const char *path, char **const argv)
+{
+	char *envp[1];
+	envp[0]=NULL;
+	SYSCALL3(EXEC, path, argv, envp);
+}
+
 int execve(const char *path, char **const argv, char **const envp)
 {
 	SYSCALL3(EXEC, path, argv, envp);
@@ -232,6 +279,11 @@ int execve(const char *path, char **const argv, char **const envp)
 int dup2(int oldfd, int newfd)
 {
 	SYSCALL2(DUP2, oldfd, newfd);
+}
+
+int dup(int oldfd)
+{
+	return -1;
 }
 
 int pipe(int pipefd[2])

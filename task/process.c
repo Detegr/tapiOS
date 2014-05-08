@@ -238,9 +238,13 @@ vaddr_t init_elf_get_entry_point(uint8_t* elf)
 	 * expects to be operating in an already allocated page initially.
 	 */
 
-	/* This page is for bss */
-	current_process->brk=(bss_start + 0x1000) & 0xFFFFF000;
-	kalloc_page(current_process->brk, false, true);
+	/* These pages are for bss */
+	int bss_pages = ((bss_end - bss_start) / 0x1000) + 1;
+	for(int i=1; i<=bss_pages; ++i)
+	{
+		current_process->brk=(bss_start + i*0x1000) & 0xFFFFF000;
+		kalloc_page(current_process->brk, false, true);
+	}
 
 	/* Assign process brk to page after bss */
 	if(current_process->brk != ((bss_end + 0x1000) & 0xFFFFF000))

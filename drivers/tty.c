@@ -26,6 +26,8 @@ static char *handle_escape(char *str)
 	int elems=ksscanf(str, "\033[%u;%uH", &outstr, &row, &col);
 	if(elems==2 && outstr)
 	{
+		if(row == 0) row++;
+		if(col == 0) col++;
 		set_cursor(row-1, col-1);
 		return outstr;
 	}
@@ -33,6 +35,17 @@ static char *handle_escape(char *str)
 	if(elems==1 && outstr)
 	{
 		move_cursor(0, col);
+		return outstr;
+	}
+	elems=ksscanf(str, "\033[%uJ", &outstr, &col);
+	if(elems==1 && outstr)
+	{
+		cls();
+		return outstr;
+	}
+	elems=ksscanf(str, "\033[%um", &outstr, &col);
+	if(elems==1 && outstr)
+	{
 		return outstr;
 	}
 	if(strncmp(str, "\033[H", 3) == 0)
@@ -63,7 +76,8 @@ static char *handle_escape(char *str)
 
 int32_t tty_write(struct file *f, void *data, uint32_t count)
 {
-	for(char *p=data, i=0; i<count; ++i)
+	int i=0;
+	for(char *p=data; i<count; ++i)
 	{
 		if(*p == '\033')
 		{
