@@ -7,8 +7,11 @@
 #include <termios.h>
 #include <sys/ioctl.h>
 #include <drivers/keyboard.h>
+#include <sys/poll.h>
 
 #define TTY_BUFFER_SIZE 1024
+
+static bool bold=false;
 
 static struct file_actions tty_fact;
 static struct inode_actions tty_iact;
@@ -31,6 +34,12 @@ static char *handle_escape(char *str)
 		set_cursor(row-1, col-1);
 		return outstr;
 	}
+	elems=ksscanf(str, "\033[%u;%ur", &outstr, &row, &col);
+	if(elems==2 && outstr)
+	{
+		// Set scrolling area to (row, col)
+		return outstr;
+	}
 	elems=ksscanf(str, "\033[%uC", &outstr, &col);
 	if(elems==1 && outstr)
 	{
@@ -46,6 +55,7 @@ static char *handle_escape(char *str)
 	elems=ksscanf(str, "\033[%um", &outstr, &col);
 	if(elems==1 && outstr)
 	{
+		if(col == 1) bold=true;
 		return outstr;
 	}
 	if(strncmp(str, "\033[H", 3) == 0)
@@ -61,14 +71,21 @@ static char *handle_escape(char *str)
 	if(strncmp(str, "\033[m", 3) == 0)
 	{
 		// Turn off character attributes
+		bold=false;
 		return str+3;
 	}
 	if(strncmp(str, "\033[?1l", 5) == 0)
 	{
 		return str+5;
 	}
+	if(strncmp(str, "\033=", 2) == 0)
+	{
+		// Enter alternate keypad mode
+		return str+2;
+	}
 	if(strncmp(str, "\033>", 2) == 0)
 	{
+		// Exit alternate keypad mode
 		return str+2;
 	}
 	return str;
@@ -84,7 +101,8 @@ int32_t tty_write(struct file *f, void *data, uint32_t count)
 			char *pp=handle_escape(p);
 			if(pp!=p) {p=pp; continue;}
 		}
-		kprintc(*(p++));
+		else if(*p == '\017' || *p == '\016') {p++; continue;} // Some scancode settings, ignore
+		kprintca(*(p++), bold);
 	}
 	update_cursor();
 	return count;
@@ -136,6 +154,19 @@ int32_t tty_ioctl(struct file *f, int cmd, void *arg)
 	return -EBADF;
 }
 
+static int32_t tty_poll(struct file *f, uint16_t events, uint16_t *revents)
+{
+	if(events & POLLIN)
+	{
+		if(kbd_hasdata())
+		{
+			*revents|=POLLIN;
+			return 1;
+		}
+	}
+	return 0;
+}
+
 static void set_initial_termios(void)
 {
 	tty_termios.c_iflag=INLCR|IXON;
@@ -152,6 +183,7 @@ void register_tty_driver(void)
 	tty_fact.read=&tty_read;
 	tty_fact.write=&tty_write;
 	tty_fact.ioctl=&tty_ioctl;
+	tty_fact.poll=&tty_poll;
 
 	set_initial_termios();
 

@@ -12,6 +12,7 @@
 #include <sys/fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/termios.h>
+#include <sys/poll.h>
 
 extern void _return_from_exec(void);
 extern void _return_to_userspace(void);
@@ -31,13 +32,14 @@ int _close(int fd);
 int _dup2(int oldfd, int newfd);
 int _fcntl(int fd, int cmd, int arg);
 int _ioctl(int fd, int req, void *argp);
+int _poll(struct pollfd *fds, nfds_t nfds, int timeout);
 
 typedef int(*syscall_ptr)();
 syscall_ptr syscalls[]={
 	&_exit, &_write, &_read, (syscall_ptr)&_sbrk,
 	&_open, &_dup2, &_readdir,
 	&fork, &_waitpid, &_exec, &_fcntl, &getpid, &_fstat,
-	&_getcwd, &_chdir, &_close, &_ioctl
+	&_getcwd, &_chdir, &_close, &_ioctl, &_poll
 };
 
 int _exit(int code)
@@ -360,6 +362,23 @@ int _ioctl(int fd, int req, void *argp)
 		}
 	}
 	return -EINVAL;
+}
+
+int _poll(struct pollfd *fds, nfds_t nfds, int timeout)
+{
+	int ret=0;
+	for(nfds_t i=0; i<nfds; ++i)
+	{
+		if(fds[i].fd < 0) {fds[i].revents=-1; continue;}
+		struct file *f=current_process->fds[fds[i].fd];
+		if(!f)
+		{
+			fds[i].revents=-1;
+			continue;
+		}
+		ret += vfs_poll(f, fds[i].events, &fds[i].revents);
+	}
+	return ret;
 }
 
 void syscall(void *v)

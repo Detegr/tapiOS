@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <dirent.h>
 #include <limits.h>
+#include <sys/poll.h>
 
 #define SUPERBLOCK_SIZE 1024
 #define SUPERBLOCK_OFFSET 1024
@@ -442,6 +443,19 @@ static int32_t ext2_stat(struct file *f, struct stat *st)
 	return 0;
 }
 
+static int32_t ext2_poll(struct file *f, uint16_t events, uint16_t *revents)
+{
+	if(events & POLLIN)
+	{
+		if(f->pos < f->inode->size)
+		{
+			*revents|=POLLIN;
+			return 1;
+		}
+	}
+	return 0;
+}
+
 struct inode *ext2_fs_init(uint8_t *fs_data)
 {
 	ext2_superblock* sb=(ext2_superblock*)(fs_data+SUPERBLOCK_OFFSET);
@@ -468,6 +482,7 @@ struct inode *ext2_fs_init(uint8_t *fs_data)
 	ret->f_act->write=&ext2_write;
 	ret->f_act->stat=&ext2_stat;
 	ret->f_act->ioctl=NULL;
+	ret->f_act->poll=&ext2_poll;
 	ret->mountpoint=ret;
 	ret->parent=NULL;
 	ret->children=NULL;

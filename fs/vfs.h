@@ -40,6 +40,7 @@ struct file_actions
 	int32_t (*open)(struct file *file, int flags);
 	int32_t (*close)(struct file *file);
 	int32_t (*ioctl)(struct file *file, int cmd, void *arg);
+	int32_t (*poll)(struct file *file, uint16_t events, uint16_t *revents);
 };
 
 struct dirent dirent;
@@ -61,6 +62,7 @@ int32_t vfs_write(struct file *file, void *data, uint32_t count);
 int32_t vfs_stat(struct file *file, struct stat *st);
 int32_t vfs_close(struct file *f);
 int32_t vfs_ioctl(struct file *f, int cmd, void *arg);
+int32_t vfs_poll(struct file *f, uint16_t events, uint16_t *revents);
 struct dirent *vfs_readdir(int dirfd);
 void vfs_mount(struct inode *mount, struct inode *to);
 

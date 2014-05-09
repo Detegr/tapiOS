@@ -11,6 +11,7 @@ void cls_from_cursor_down(void);
 void print_startup_info(const char* section, bool ok);
 void kprintf(const char* fmt, ...);
 void kprintc(const char c);
+void kprintca(const char c, bool bold);
 void hide_cursor(void);
 void set_cursor(uint8_t row, uint8_t col);
 void move_cursor(uint8_t rows, uint8_t cols);

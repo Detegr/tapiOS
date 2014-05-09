@@ -190,3 +190,12 @@ int32_t vfs_ioctl(struct file *f, int cmd, void *arg)
 	}
 	return -EBADF;
 }
+
+int32_t vfs_poll(struct file *f, uint16_t events, uint16_t *revents)
+{
+	if(f->inode->f_act->poll)
+	{
+		return f->inode->f_act->poll(f, events, revents);
+	}
+	return 0;
+}

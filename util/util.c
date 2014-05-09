@@ -248,6 +248,8 @@ int ksscanf(const char *str, const char *fmt, char **outstr, ...)
 					unsigned int *ret=va_arg(args, unsigned int*);
 					const char *spp=sp;
 					for(digits=0; sp && isdigit(*sp); ++sp) digits++;
+					if(digits==0) goto skip;
+
 					char buf[digits+1];
 					for(int i=0; i<digits; ++i) buf[i]=spp[i];
 					buf[digits]=0;
@@ -258,6 +260,7 @@ int ksscanf(const char *str, const char *fmt, char **outstr, ...)
 		}
 		else
 		{
+skip:
 			if(*p != *sp) {outstr=NULL; return 0;}
 			else ++sp;
 		}

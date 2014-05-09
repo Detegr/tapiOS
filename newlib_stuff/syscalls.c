@@ -31,6 +31,7 @@
 #define CHDIR 15
 #define CLOSE 16
 #define IOCTL 17
+#define POLL 18
 
 #define SYSCALL0(n) \
 	int ret; \
@@ -66,7 +67,7 @@ struct DIR
 
 int poll(struct pollfd *fds, nfds_t nfds, int timeout)
 {
-	return -1;
+	SYSCALL3(POLL, fds, nfds, timeout);
 }
 
 char *getlogin(void)

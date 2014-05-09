@@ -67,7 +67,7 @@ void cls_from_cursor_down(void)
 	}
 }
 
-static void printchar(const char c, uint8_t color)
+static void printchar(const char c, uint8_t color, bool bold)
 {
 	if(!c) return;
 	if(c=='\n')
@@ -82,7 +82,7 @@ static void printchar(const char c, uint8_t color)
 	else
 	{
 		*(video+(row*160)+col)=c;
-		*(video+(row*160)+col+1)=color;
+		*(video+(row*160)+col+1)=color | ((bold ? 1 : 0) << 3);
 		col+=2;
 		if(col>=160)
 		{
@@ -99,7 +99,12 @@ static void printchar(const char c, uint8_t color)
 
 void kprintc(const char c)
 {
-	printchar(c, 0x07);
+	printchar(c, 0x07, false);
+}
+
+void kprintca(const char c, bool bold)
+{
+	printchar(c, 0x07, bold);
 }
 
 static void print(const char* str, uint8_t color)
@@ -107,7 +112,7 @@ static void print(const char* str, uint8_t color)
 	const char* s;
 	for(s=str; *s; s++)
 	{
-		printchar(*s, color);
+		printchar(*s, color, false);
 	}
 }
 
@@ -124,7 +129,7 @@ static void printix(uint32_t x, int color)
 	int i;
 	for(i=28; i>=0; i-=4)
 	{
-		printchar(halfbytetohex((x>>i) & 0x0F), color);
+		printchar(halfbytetohex((x>>i) & 0x0F), color, false);
 	}
 }
 
@@ -152,7 +157,7 @@ void kprintf(const char* fmt, ...)
 	va_start(argp, fmt);
 	for(const char* p=fmt; *p; ++p)
 	{
-		if(*p != '%') printchar(*p, color);
+		if(*p != '%') printchar(*p, color, false);
 		else
 		{
 			switch(*(++p))
@@ -166,7 +171,7 @@ void kprintf(const char* fmt, ...)
 				case 'c':
 				{
 					int c=va_arg(argp, int);
-					printchar((char)c, color);
+					printchar((char)c, color, false);
 					break;
 				}
 				case 'd':
@@ -183,7 +188,7 @@ void kprintf(const char* fmt, ...)
 				}
 				case '%':
 				{
-					printchar('%', color);
+					printchar('%', color, false);
 					break;
 				}
 				case '@':

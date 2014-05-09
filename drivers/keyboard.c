@@ -24,6 +24,11 @@ static char kbd_buffer_pop(void)
 	return kbd_buffer[--kbd_buf_size];
 }
 
+bool kbd_hasdata(void)
+{
+	return kbd_buf_size > 0;
+}
+
 int32_t kbd_read(struct file *f, void *top, uint32_t count)
 {
 	uint8_t *to=top;
