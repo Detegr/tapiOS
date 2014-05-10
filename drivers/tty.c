@@ -10,6 +10,7 @@
 #include <sys/poll.h>
 
 #define TTY_BUFFER_SIZE 1024
+#define CANONICAL ((tty_termios.c_lflag & ICANON) == ICANON)
 
 static bool bold=false;
 
@@ -68,6 +69,11 @@ static char *handle_escape(char *str)
 		cls_from_cursor_down();
 		return str+3;
 	}
+	if(strncmp(str, "\033[K", 3) == 0)
+	{
+		cls_from_cursor_to_eol();
+		return str+3;
+	}
 	if(strncmp(str, "\033[m", 3) == 0)
 	{
 		// Turn off character attributes
@@ -99,7 +105,13 @@ int32_t tty_write(struct file *f, void *data, uint32_t count)
 		if(*p == '\033')
 		{
 			char *pp=handle_escape(p);
-			if(pp!=p) {p=pp; continue;}
+			if(pp!=p)
+			{
+				int move=pp-p-1;
+				if(move>0) i+=move;
+				p=pp;
+				continue;
+			}
 		}
 		else if(*p == '\017' || *p == '\016') {p++; continue;} // Some scancode settings, ignore
 		kprintca(*(p++), bold);
@@ -117,7 +129,7 @@ int32_t tty_read(struct file *f, void *top, uint32_t count)
 	for(i=0; i<count;)
 	{
 		int r=kbd_read(NULL, to+i, 1);
-		if(to[i] == CHAR_BACKSPACE)
+		if(to[i] == CHAR_BACKSPACE && CANONICAL)
 		{
 			if(i==0) continue;
 			to[--i]=0;
@@ -125,7 +137,12 @@ int32_t tty_read(struct file *f, void *top, uint32_t count)
 			update_cursor();
 			--i;
 		}
-		else if(/*echo*/1) {kprintc(to[i]); update_cursor();}
+		else if((tty_termios.c_lflag & ECHO) == ECHO)
+		{
+			kprintc(to[i]);
+			update_cursor();
+		}
+		if(!CANONICAL) return r;
 		if(to[i] == '\n') return i+r;
 		i+=r;
 	}
@@ -148,6 +165,10 @@ int32_t tty_ioctl(struct file *f, int cmd, void *arg)
 		case TCSETATTR:
 		{
 			struct termios *t=arg;
+			tty_termios.c_iflag=t->c_iflag;
+			tty_termios.c_oflag=t->c_oflag;
+			tty_termios.c_lflag=t->c_lflag;
+			tty_termios.c_cflag=t->c_cflag;
 			return 0;
 		}
 	}

@@ -8,6 +8,7 @@ volatile unsigned char* video;
 
 void cls(void);
 void cls_from_cursor_down(void);
+void cls_from_cursor_to_eol(void);
 void print_startup_info(const char* section, bool ok);
 void kprintf(const char* fmt, ...);
 void kprintc(const char c);

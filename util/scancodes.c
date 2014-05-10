@@ -1,5 +1,6 @@
 #include "scancodes.h"
 #include <stdbool.h>
+#include <terminal/vga.h>
 
 char char_for_scancode(uint8_t scancode)
 {
@@ -7,6 +8,7 @@ char char_for_scancode(uint8_t scancode)
 	char ret=0;
 	switch(scancode)
 	{ // Scan code set 1
+		case 0x01: return 27; // Esc
 		case 0x02: return shift ? '!' : '1';
 		case 0x03: return shift ? '@' : '2';
 		case 0x04: return shift ? '#' : '3';
@@ -55,6 +57,7 @@ char char_for_scancode(uint8_t scancode)
 		case 0x35: return shift ? '?' : '/';
 		case 0x39: return ' ';
 		case 0x1C: return '\n';
+		case 0x81:
 		case 0x9A:
 		case 0x9B:
 		case 0xB5:

@@ -66,10 +66,23 @@ void cls_from_cursor_down(void)
 		}
 	}
 }
+void cls_from_cursor_to_eol(void)
+{
+	for(int x=col; x<160; x+=2)
+	{
+		*(video+(row*160)+x)=' ';
+		*(video+(row*160)+x+1)=0x07;
+	}
+}
 
 static void printchar(const char c, uint8_t color, bool bold)
 {
-	if(!c) return;
+	if(c <= 7) return;
+	if(c=='\b')
+	{
+		if(col>0) move_cursor(0, -1);
+		return;
+	}
 	if(c=='\n')
 	{
 		col=0;
