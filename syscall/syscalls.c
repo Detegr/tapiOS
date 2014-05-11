@@ -116,26 +116,46 @@ void* _sbrk(int32_t increment)
 	current_process->brk=newbrk;
 	return (void*)oldbrk;
 }
-inline void* sbrk(int32_t increment)
+
+static struct inode *getdir_helper(const char *path)
 {
-	return _sbrk(increment);
+	char *dirpath=strndup(path, PATH_MAX);
+	char *dir_name=dirname(dirpath);
+	if(strncmp(dir_name, ".", 1) == 0) dir_name=(char*)current_process->cwd;
+	struct inode *dir=vfs_search((struct inode*)root_fs, dir_name);
+	kfree(dirpath);
+	return dir;
 }
 
 int _open(const char* path, int flags)
 {
-	// flags ignored for now, expecting O_RDONLY
-	// also expecting a full path
+	struct inode *inode, *dir;
+	inode=dir=NULL;
+
 	if(!root_fs) PANIC();
 	if(strnlen(path, PATH_MAX) >= PATH_MAX) return -ENAMETOOLONG;
-	struct inode *inode=vfs_search((struct inode*)root_fs, path);
+	if(path[0]=='/')
+	{// Absolute path
+		inode=vfs_search((struct inode*)root_fs, path);
+	}
+	else
+	{// Relative path
+		dir=getdir_helper(path);
+		if(!dir) return -ENOENT;
+		inode=vfs_search(dir, path);
+	}
 	if(inode && ((flags & (O_CREAT|O_EXCL)) == (O_CREAT|O_EXCL))) return -EEXIST;
-	int status;
-	char *dirpath=strndup(path, PATH_MAX);
-	struct inode *dir=vfs_search((struct inode*)root_fs, dirname(dirpath));
-	kfree(dirpath);
-	if(!dir) return -ENOENT;
-	if(!inode && (flags & O_CREAT)) inode=vfs_new_inode(dir, path);
+	if(!inode && (flags & O_CREAT))
+	{
+		if(!dir)
+		{
+			dir=getdir_helper(path);
+			if(!dir) return -ENOENT;
+		}
+		inode=vfs_new_inode(dir, path);
+	}
 	if(!inode) return -ENOENT;
+	int status;
 	struct file *f=vfs_open(inode, &status, flags);
 	if(!f) return status;
 	return newfd(f);
@@ -162,10 +182,7 @@ int _readdir(int dirfd, struct dirent *ret)
 		memcpy(ret, de, sizeof(struct dirent));
 		return 0;
 	}
-	else
-	{
-		return -1;
-	}
+	else return -1;
 }
 
 pid_t _waitpid(pid_t pid, int *status, int options)
