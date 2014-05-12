@@ -21,5 +21,6 @@ void reset_cursor(void);
 void delete_last_char(int,int);
 int get_cursor_row(void);
 int get_cursor_col(void);
+void scroll(int rows);
 
 #endif

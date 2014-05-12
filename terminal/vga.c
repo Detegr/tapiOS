@@ -106,7 +106,20 @@ static void printchar(const char c, uint8_t color, bool bold)
 	if(row>24)
 	{ // Scroll the buffer
 		row=24;
-		memmove((uint8_t*)video, ((uint8_t*)video)+160, 25*160);
+		scroll(1);
+		cls_from_cursor_to_eol();
+	}
+}
+
+void scroll(int rows)
+{
+	if(rows>0)
+	{
+		memmove((uint8_t*)video, ((uint8_t*)video)+(rows*160), 25*160);
+	}
+	else
+	{
+		memmove((uint8_t*)video+(-rows*160), (uint8_t*)video, 25*160);
 	}
 }
 
