@@ -279,6 +279,7 @@ struct inode *ext2_new_inode(struct inode *node, const char *path)
 		struct inode *ret=kmalloc(sizeof(struct inode));
 		ret->inode_no=inode_index;
 		ret->flags=0x8000; // Regular file
+		strncpy(ret->name, basename((char*)path), 256);
 		ret->size=0;
 		ret->superblock=sb;
 		ret->i_act=node->i_act;
@@ -395,6 +396,7 @@ static int32_t ext2_write(struct file *f, void *data, uint32_t count)
 		uint32_t *block_bitmap=get_block(sb, desc->bitmap_block_no);
 		uint32_t len=BLOCKSIZE(sb)/sizeof(uint32_t);
 		int block_index=-1;
+		if(f->pos!=0) PANIC(); // NYI
 		for(uint32_t i=0; i<len; ++i)
 		{
 			if(block_bitmap[i] != 0xFFFFFFFF)
@@ -411,12 +413,14 @@ static int32_t ext2_write(struct file *f, void *data, uint32_t count)
 		uint8_t *block=get_block(sb, block_index);
 		uint8_t *from=data;
 		int32_t written=0;
+		if(count > BLOCKSIZE(sb)) PANIC();
 		for(uint32_t i=0; i<count; ++i, ++written)
 		{
 			block[i]=from[i];
 		}
-		f->inode->size=inode->size_low=written;
-		f->pos=written;
+		f->inode->size+=written;
+		inode->size_low+=written;
+		f->pos+=written;
 		inode->blocks[0]=block_index;
 		return written;
 	}

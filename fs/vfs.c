@@ -72,9 +72,14 @@ struct inode *vfs_new_inode(struct inode *dir, const char *path)
 	{
 		struct inode *ret=dir->i_act->new(dir, path);
 		ret->parent=dir;
+		ret->siblings=NULL;
+		ret->children=NULL;
 		struct inode *i=ret->parent->children;
-		while(i->siblings) i=i->siblings;
-		i->siblings=ret;
+		if(i)
+		{
+			while(i->siblings) i=i->siblings;
+			i->siblings=ret;
+		} else ret->parent->children=ret;
 		return ret;
 	}
 	return NULL;
