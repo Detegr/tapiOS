@@ -94,6 +94,16 @@ static char *handle_escape(char *str)
 		// Exit alternate keypad mode
 		return str+2;
 	}
+	if(strncmp(str, "\033M", 2) == 0)
+	{
+		scroll(-1);
+		return str+2;
+	}
+	if(strncmp(str, "\033D", 2) == 0)
+	{
+		scroll(1);
+		return str+2;
+	}
 	return str;
 }
 
