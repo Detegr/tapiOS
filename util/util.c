@@ -46,16 +46,16 @@ void* memcpy(void* dst, const void* src, uint32_t size)
 
 void* memmove(void* dst, const void* src, uint32_t size)
 {
-	uint8_t buf[size];
-	uint8_t* p1=(uint8_t*)dst;
-	uint8_t* p2=(uint8_t*)src;
-	for(uint32_t i=0; i<size; ++i)
+	if(src == dst) return dst;
+	if(src > dst) memcpy(dst, src, size);
+	else
 	{
-		buf[i]=p2[i];
-	}
-	for(uint32_t i=0; i<size; ++i)
-	{
-		p1[i]=buf[i];
+		uint8_t* p1=(uint8_t*)dst;
+		uint8_t* p2=(uint8_t*)src;
+		for(uint32_t i=size; i>0; --i)
+		{
+			p1[i]=p2[i];
+		}
 	}
 	return dst;
 }
