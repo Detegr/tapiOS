@@ -121,7 +121,7 @@ static struct inode *getdir_helper(const char *path)
 {
 	char *dirpath=strndup(path, PATH_MAX);
 	char *dir_name=dirname(dirpath);
-	if(strncmp(dir_name, ".", 1) == 0) dir_name=(char*)current_process->cwd;
+	if(strlen(dir_name) == 1 && dir_name[0] == '.') dir_name=(char*)current_process->cwd;
 	struct inode *dir=vfs_search((struct inode*)root_fs, dir_name);
 	kfree(dirpath);
 	return dir;
