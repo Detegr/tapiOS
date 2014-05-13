@@ -25,58 +25,36 @@ _map_page:
 	push ebp
 	mov ebp, esp
 
-	sub esp, 30
-	mov [esp-30], DWORD 0                 ; Directory index
-	mov [esp-24], eax                     ; Directory
-	mov [esp-20], ebx                     ; Virtual address
-	mov [esp-16], ecx                     ; Count
-	mov [esp-12], ecx                     ; Original count
-	mov [esp-8] , DWORD 0                 ; Mapped bytes
-	mov [esp-4] , edx                     ; Physical address
+	sub esp, 4
+	mov [esp-4], eax                      ; Page directory location
+	mov esi, edx                          ; Physical address
+	or esi, INITIAL_KERNEL_CODE_FLAGS     ; Set correct flags
+
+	shr ebx, 20                           ; Directory position
+	add ebx, eax                          ; Shift only 20 bits and add directory location
+	mov eax, ecx                          ; Original count
 
 	.fill:
-		mov [esp-16], ecx                 ; Count
+		mov edi, eax                      ; Original count
+		sub edi, ecx                      ; pages mapped
+		shl edi, 2                        ; Multiply by 4
 
-		mov edx, ebx
-		shr edx, 22                       ; Directory position
-		mov [esp-30], edx                 ; Index
-
-		mov eax, [esp-12]                 ; Original count
-		sub eax, ecx                      ; pages mapped
-		mov ecx, 4
-		mul ecx
-		mov [esp-8], eax                  ; mapped bytes TODO: What if result is in edx too?
-		mov edx, [esp-30]                 ; Index
-		mov eax, [esp-24]                 ; Directory
-		mov ebx, [esp-8]                  ; Mapped bytes
-
-		mov ecx, [eax + edx * 4]          ; get old entry
-		and ecx, FLAG_PRESENT
-		cmp ecx, 0x0                      ; if not present
-		mov ecx, [esp-16]                 ; Store count for debugging
+		mov edx, [ebx]                    ; get old entry
+		and edx, FLAG_PRESENT
+		test edx, edx                     ; if not present
 		je __panic                        ; jump to panic
 
-		mov ecx, [esp-16]                 ; CountCount
+		mov edx, [ebx]                    ; Fetch page table from the correct directory index
+		and edx, 0xFFFFF000               ; Zero out unnecessary bits
+		add edx, edi                      ; page table + mapped bytes
 
-		mov eax, [eax + edx * 4]          ; Fetch page table from the correct directory index
-		and eax, 0xFFFFF000               ; Zero out unnecessary bytes
-		add eax, ebx                      ; page table + mapped bytes
-		mov ebx, [esp-4]  	              ; physical address
-
-		or ebx, INITIAL_KERNEL_CODE_FLAGS
-		mov [eax], ebx                    ; set physical address to correct page table
-
-		add ebx, 0x1000                   ; advance to next page
-		mov [esp-4], ebx                  ; Physical address
-
-		mov ebx, [esp-20]				  ; advance virtual address too
-		add ebx, 0x1000
-		mov [esp-20], ebx 
+		mov [edx], esi                    ; set physical address to correct page table
+		add esi, 0x1000                   ; advance to next page
 
 		loop .fill
 
-	mov eax, [esp-24]                     ; Directory
-	add esp, 20
+	mov eax, [esp-4]
+	add esp, 4
 	mov esp, ebp
 	pop ebp
 	ret
