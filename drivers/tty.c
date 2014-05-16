@@ -210,6 +210,8 @@ void register_tty_driver(void)
 {
 	memset(inbuf, 0, TTY_BUFFER_SIZE);
 	memset(outbuf, 0, TTY_BUFFER_SIZE);
+	memset(&tty_fact, 0, sizeof(tty_fact));
+	memset(&tty_iact, 0, sizeof(tty_iact));
 
 	tty_fact.read=&tty_read;
 	tty_fact.write=&tty_write;

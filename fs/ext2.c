@@ -176,6 +176,7 @@ struct inode *ext2_search(struct inode *node, const char *name)
 			{
 				ext2_inode *retinode=read_inode(node->superblock, dir->inode);
 				struct inode *ret=kmalloc(sizeof(struct inode));
+				memset(ret, 0, sizeof(struct inode));
 				memcpy(ret->name, &dir->name, dir->name_length_low);
 				ret->inode_no=dir->inode;
 				ret->flags=retinode->type_and_permissions;
@@ -277,6 +278,7 @@ struct inode *ext2_new_inode(struct inode *node, const char *path)
 		insert_inode_to_directory(sb, read_inode(sb, node->inode_no), inode_index, path);
 
 		struct inode *ret=kmalloc(sizeof(struct inode));
+		memset(ret, 0, sizeof(struct inode));
 		ret->inode_no=inode_index;
 		ret->flags=0x8000; // Regular file
 		strncpy(ret->name, basename((char*)path), 256);
@@ -469,6 +471,7 @@ struct inode *ext2_fs_init(uint8_t *fs_data)
 		return NULL;
 	}
 	struct inode *ret=kmalloc(sizeof(struct inode));
+	memset(ret, 0, sizeof(struct inode));
 	ext2_inode* inode=read_inode(sb, 2); // inode 2 is always the root node
 	ext2_directory* d=get_block(sb, inode->blocks[0]);
 	memcpy(ret->name, &d->name, d->name_length_low);
@@ -477,7 +480,9 @@ struct inode *ext2_fs_init(uint8_t *fs_data)
 	ret->size=inode->size_low;
 	ret->superblock=sb;
 	ret->i_act=kmalloc(sizeof(struct inode_actions));
+	memset(ret->i_act, 0, sizeof(struct inode_actions));
 	ret->f_act=kmalloc(sizeof(struct file_actions));
+	memset(ret->f_act, 0, sizeof(struct file_actions));
 	ret->i_act->new=&ext2_new_inode;
 	ret->i_act->search=&ext2_search;
 	ret->i_act->readdir=&ext2_readdir;

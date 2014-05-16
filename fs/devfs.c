@@ -21,8 +21,12 @@ struct inode *devfs_mknod(struct inode *devfs, const char *name, uint16_t major,
 	if(!devfs) return NULL;
 
 	struct inode *ret=kmalloc(sizeof(struct inode));
+	memset(ret, 0, sizeof(struct inode));
 	ret->parent=devfs;
 	ret->mountpoint=devfs;
+	ret->children=NULL;
+	ret->siblings=NULL;
+
 	if(!devfs->children) devfs->children=ret;
 	else
 	{
@@ -42,11 +46,10 @@ struct inode *devfs_mknod(struct inode *devfs, const char *name, uint16_t major,
 static int32_t devfs_open(struct file *f, int flags)
 {
 	uint16_t major=f->inode->inode_no>>16;
-	if(major == 0) return 0;
+	if(major == 0) return 0; // Mountpoint
 
 	f->inode->f_act=devices[major].f_act;
 	f->inode->i_act=devices[major].i_act;
-
 	f->inode->f_act->open=devfs_open;
 
 	return 0;
@@ -91,6 +94,7 @@ struct inode *devfs_init(void)
 	memset(devices, 0, DEVICES_MAX*sizeof(struct device_entry));
 
 	struct inode *ret=kmalloc(sizeof(struct inode));
+	memset(ret, 0, sizeof(struct inode));
 	ret->inode_no=0;
 	ret->size=0;
 	ret->f_act=kmalloc(sizeof(struct file_actions));

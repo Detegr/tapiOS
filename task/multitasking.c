@@ -52,6 +52,7 @@ void setup_initial_process(vaddr_t entry_point)
 	current_process->kesp=current_process->esp0+KERNEL_STACK_SIZE;
 	current_process->state=running;
 	current_process->active=true;
+	memset((struct file**)current_process->fds, 0, (sizeof(struct file*) * FD_MAX));
 	strncpy((char*)current_process->cwd, "/", 2);
 	memset(current_process->esp0, 0, KERNEL_STACK_SIZE);
 	memset((void*)current_process->fds, 0, FD_MAX*sizeof(struct file*));

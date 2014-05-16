@@ -42,6 +42,7 @@ static struct inode *searchfunc(struct inode *wnode, const char *path)
 		} while((i=i->siblings));
 		if(exists) return exists;
 	}
+	if(!wnode->i_act || !wnode->i_act->search) return NULL;
 	struct inode *nextnode=wnode->i_act->search(wnode, path);
 	if(nextnode)
 	{
