@@ -81,7 +81,11 @@ int _read(int fd, uint8_t* to, uint32_t count)
 int _write(int fd, uint8_t* to, uint32_t count)
 {
 	struct file *f=current_process->fds[fd];
-	if(!f) PANIC();
+	if(!f)
+	{
+		kprintf("FD %d does not exist!\n", fd);
+		PANIC();
+	}
 	return vfs_write(f, to, count);
 }
 
