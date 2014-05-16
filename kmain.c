@@ -19,6 +19,7 @@
 #include <fcntl.h>
 #include <drivers/tty.h>
 #include <drivers/keyboard.h>
+#include <drivers/pci.h>
 
 #define KERNEL_VMA 0xC0000000
 
@@ -71,6 +72,8 @@ void kmain(struct multiboot* b, uint32_t magic)
 	setup_tasking();
 	setup_process_tree();
 	set_timer_freq(100);
+
+	register_pci_driver();
 
 	b=(struct multiboot*)((uint8_t*)b+KERNEL_VMA);
 	uint32_t mods_addr=*(uint32_t*)(b->mods_addr + KERNEL_VMA) + KERNEL_VMA;
