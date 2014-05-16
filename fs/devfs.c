@@ -74,6 +74,11 @@ static int32_t devfs_stat(struct file *f, struct stat *st)
 	return 0;
 }
 
+static struct inode *devfs_search(struct inode *node, const char *name)
+{
+	return NULL;
+}
+
 static struct dirent* devfs_readdir(struct inode *node)
 {
 	static struct inode *prevnode=NULL;
@@ -101,6 +106,7 @@ struct inode *devfs_init(void)
 	ret->i_act=kmalloc(sizeof(struct inode_actions));
 	ret->f_act->open=&devfs_open;
 	ret->f_act->stat=&devfs_stat;
+	ret->i_act->search=&devfs_search;
 	ret->i_act->readdir=&devfs_readdir;
 	ret->mountpoint=NULL;
 	ret->parent=NULL;
