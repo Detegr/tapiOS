@@ -30,8 +30,10 @@ typedef int32_t pid_t;
 uint8_t inb(uint16_t port);
 
 void outb(uint16_t port, uint16_t src);
+void outdw(uint16_t port, uint32_t src);
 void outw(uint16_t port, uint16_t src);
 uint8_t inb(uint16_t port);
+uint32_t indw(uint16_t port);
 
 void panic(const char* file, uint32_t line);
 

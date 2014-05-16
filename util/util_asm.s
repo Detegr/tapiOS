@@ -2,10 +2,12 @@ global _setgdt
 global _setidt
 global _outb
 global _outw
+global _outdw
 global _io_wait
 global _idle
 global _panic
 global _inb
+global _indw
 global _get_eip
 global _return_to_userspace
 
@@ -23,17 +25,25 @@ _outb:
 	ret
 
 _outw:
-	push ebp
-	mov ebp, esp
 	mov ax, [esp+8]
 	mov dx, [esp+4]
 	out dx, ax
-	pop ebp
+	ret
+
+_outdw:
+	mov eax, [esp+8]
+	mov dx, [esp+4]
+	out dx, eax
 	ret
 
 _inb:
 	mov edx, [esp+4]
 	in al, dx
+	ret
+
+_indw:
+	mov dx, [esp+4]
+	in eax, dx
 	ret
 
 _io_wait:
