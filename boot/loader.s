@@ -30,6 +30,12 @@ STACKSIZE	equ 0x4000                     ; 16k stack size
 
 [section .setup]
 _start:
+
+;mov ecx, 0x10000000
+;_fill_with_garbage:
+;mov [ecx + 0x01956000], BYTE 0xCC
+;loop _fill_with_garbage
+
 	mov esp, stack+STACKSIZE               ; Setup stack pointer to the bottom of the stack
 	sub esp, KERNEL_VMA                    ; Correct to the physical address of the stack
 	mov ebp, esp
@@ -84,7 +90,7 @@ _map_kernel_to_higher_half:
 kernel:
 	xor ebp, ebp
 	cli                                    ; Disable interrupts until we setup gdt and idt
-	
+
 	call kmain                             ; Start kernel
 	cli                                    ; Clear interrupts if kernel exists
 .halt:
