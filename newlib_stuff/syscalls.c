@@ -32,6 +32,7 @@
 #define CLOSE 16
 #define IOCTL 17
 #define POLL 18
+#define MKDIR 19
 
 #define SYSCALL0(n) \
 	int ret; \
@@ -107,7 +108,7 @@ speed_t cfgetospeed(const struct termios *termios_p)
 
 int mkdir(const char *pathname, mode_t mode)
 {
-	return -1;
+	SYSCALL2(MKDIR, pathname, mode);
 }
 
 int unlink(const char *pathname)

@@ -1,5 +1,5 @@
 CC=/home/antti/Code/tapiOS/cross/bin/i586-pc-tapios-gcc
-OBJECTS=ls init cat dash-0.5.7/build/src/dash touch
+OBJECTS=ls init cat dash-0.5.7/build/src/dash touch mkdir
 CFLAGS=-Wall -Wextra -m32 -g3 -std=c99 -masm=intel -isystem../cross/i586-pc-tapios/include -Ttapios.ld
 LFLAGS=-melf_i386 -Lcross/i586-pc-tapios/lib -lc
 

@@ -47,14 +47,14 @@ struct dirent dirent;
 
 struct inode_actions
 {
-	struct inode *(*new)(struct inode *node, const char *path);
+	struct inode *(*new)(struct inode *node, const char *path, int flags);
 	struct inode *(*search)(struct inode *node, const char* name);
 	struct dirent *(*readdir)(struct inode *node);
 };
 
 volatile struct inode *root_fs;
 
-struct inode *vfs_new_inode(struct inode *fs, const char *path);
+struct inode *vfs_new_inode(struct inode *dir, const char *path, int flags);
 struct inode *vfs_search(struct inode *node, const char* name);
 struct file *vfs_open(struct inode *node, int *status, int flags);
 int32_t vfs_read(struct file *file, void *to, uint32_t count);

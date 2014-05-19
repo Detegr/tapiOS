@@ -67,11 +67,11 @@ struct inode *vfs_search(struct inode *node, const char *name)
 	return NULL;
 }
 
-struct inode *vfs_new_inode(struct inode *dir, const char *path)
+struct inode *vfs_new_inode(struct inode *dir, const char *path, int flags)
 {
 	if(dir->i_act->new)
 	{
-		struct inode *ret=dir->i_act->new(dir, path);
+		struct inode *ret=dir->i_act->new(dir, path, flags);
 		ret->parent=dir;
 		ret->siblings=NULL;
 		ret->children=NULL;

@@ -241,7 +241,45 @@ static int get_blockgroup_count(ext2_superblock *sb)
 	return c1;
 }
 
-struct inode *ext2_new_inode(struct inode *node, const char *path)
+static int get_free_block(ext2_superblock *sb, uint32_t bitmap_block_no)
+{
+	uint32_t *block_bitmap=get_block(sb, bitmap_block_no);
+	uint32_t len=BLOCKSIZE(sb)/sizeof(uint32_t);
+	int block_index=-1;
+	for(uint32_t i=0; i<len; ++i)
+	{
+		if(block_bitmap[i] != 0xFFFFFFFF)
+		{// TODO: This still does not work correctly
+			//kprintf("%x\n", block_bitmap[i]);
+			GET_AND_SET_LSB(block_index, &block_bitmap[i]);
+			if(block_index==32) continue;
+			//kprintf("%x\n", block_bitmap[i]);
+			return block_index;
+		}
+	}
+	return -1;
+}
+
+static void write_directory_structure(ext2_superblock *sb, void *block, uint32_t inode_index)
+{// Writes ext2_directory entries for '.' and '..' that are expected to found in every directory
+	uint8_t *p=block;
+	ext2_directory *dp=block;
+	dp->type_indicator=-1;
+	dp->name_length_low=1;
+	dp->name='.';
+	uint32_t firstsize=dp->size=calculate_dir_size(block);
+	dp->inode=inode_index;
+
+	dp=block+dp->size;
+	dp->type_indicator=-1;
+	dp->name_length_low=2;
+	char* name=(char*)&dp->name;
+	name[0]='.'; name[1]='.';
+	dp->size=BLOCKSIZE(sb)-firstsize;
+	dp->inode=inode_index;
+}
+
+struct inode *ext2_new_inode(struct inode *node, const char *path, int flags)
 {
 	ext2_superblock *sb=node->superblock;
 	int blockgroups=get_blockgroup_count(sb);
@@ -270,17 +308,27 @@ struct inode *ext2_new_inode(struct inode *node, const char *path)
 		//kprintf("Found free inode: %d\n", inode_index);
 		ext2_inode *inode=read_inode(sb, inode_index);
 		memset(inode, 0, sizeof(ext2_inode));
-		inode->type_and_permissions=0x8000;
+		inode->type_and_permissions=flags;
 		inode->hard_link_count=1;
 		inode->size_low=0;
 		inode->size_high=0;
 		inode->fragment_size=0;
 		insert_inode_to_directory(sb, read_inode(sb, node->inode_no), inode_index, path);
 
+		if(flags & 0x4000)
+		{// Directory needs ext2_directory structure to be written to the block
+			int block_index=get_free_block(sb, desc->bitmap_block_no);
+			if(block_index < 0) return NULL;
+			desc->unallocated_blocks--;
+			ext2_directory *block=get_block(sb, block_index);
+			inode->blocks[0]=block_index;
+			write_directory_structure(sb, block, inode_index);
+		}
+
 		struct inode *ret=kmalloc(sizeof(struct inode));
 		memset(ret, 0, sizeof(struct inode));
 		ret->inode_no=inode_index;
-		ret->flags=0x8000; // Regular file
+		ret->flags=flags;
 		strncpy(ret->name, basename((char*)path), 256);
 		ret->size=0;
 		ret->superblock=sb;
@@ -395,22 +443,10 @@ static int32_t ext2_write(struct file *f, void *data, uint32_t count)
 		ext2_blockgroup_descriptor *desc=&get_blockgroup_descriptor_table(sb)[blockgroup];
 		if(desc->unallocated_blocks==0) continue;
 
-		uint32_t *block_bitmap=get_block(sb, desc->bitmap_block_no);
-		uint32_t len=BLOCKSIZE(sb)/sizeof(uint32_t);
-		int block_index=-1;
 		if(f->pos!=0) PANIC(); // NYI
-		for(uint32_t i=0; i<len; ++i)
-		{
-			if(block_bitmap[i] != 0xFFFFFFFF)
-			{// TODO: This still does not work correctly
-				//kprintf("%x\n", block_bitmap[i]);
-				GET_AND_SET_LSB(block_index, &block_bitmap[i]);
-				if(block_index==32) continue;
-				//kprintf("%x\n", block_bitmap[i]);
-				desc->unallocated_blocks--;
-				break;
-			}
-		}
+		int block_index=get_free_block(sb, desc->bitmap_block_no);
+		if(block_index < 0) return -1;
+		desc->unallocated_blocks--;
 		ext2_inode *inode=read_inode(sb, f->inode->inode_no);
 		uint8_t *block=get_block(sb, block_index);
 		uint8_t *from=data;

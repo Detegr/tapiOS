@@ -33,13 +33,14 @@ int _dup2(int oldfd, int newfd);
 int _fcntl(int fd, int cmd, int arg);
 int _ioctl(int fd, int req, void *argp);
 int _poll(struct pollfd *fds, nfds_t nfds, int timeout);
+int _mkdir(const char* path, mode_t mode);
 
 typedef int(*syscall_ptr)();
 syscall_ptr syscalls[]={
 	&_exit, &_write, &_read, (syscall_ptr)&_sbrk,
 	&_open, &_dup2, &_readdir,
 	&fork, &_waitpid, &_exec, &_fcntl, &getpid, &_fstat,
-	&_getcwd, &_chdir, &_close, &_ioctl, &_poll
+	&_getcwd, &_chdir, &_close, &_ioctl, &_poll, &_mkdir
 };
 
 int _exit(int code)
@@ -156,7 +157,7 @@ int _open(const char* path, int flags)
 			dir=getdir_helper(path);
 			if(!dir) return -ENOENT;
 		}
-		inode=vfs_new_inode(dir, path);
+		inode=vfs_new_inode(dir, path, 0x8000);
 	}
 	if(!inode) return -ENOENT;
 	int status;
@@ -400,6 +401,22 @@ int _poll(struct pollfd *fds, nfds_t nfds, int timeout)
 		ret += vfs_poll(f, fds[i].events, &fds[i].revents);
 	}
 	return ret;
+}
+
+int _mkdir(const char *path, mode_t mode)
+{
+	if(strnlen(path, PATH_MAX) == PATH_MAX) return -ENAMETOOLONG;
+	struct inode *dir=getdir_helper(path);
+	if(!dir) return -ENOENT;
+	int fd=_open(path, mode);
+	if(fd>=0)
+	{
+		_close(fd);
+		return -EEXIST;
+	}
+	struct inode *newdir=vfs_new_inode(dir, path, 0x4000);
+	if(!newdir) return -EPERM;
+	return 0;
 }
 
 void syscall(void *v)
