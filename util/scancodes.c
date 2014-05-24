@@ -21,8 +21,8 @@ char char_for_scancode(uint8_t scancode)
 		case 0x0B: return shift ? ')' : '0';
 		case 0x1A: return shift ? '{' : '[';
 		case 0x1B: return shift ? '}' : ']';
-		case 0x0C: return shift ? '+' : '-';
-		case 0x0D: ret='='; break;
+		case 0x0C: return shift ? '_' : '-';
+		case 0x0D: return shift ? '+' : '=';
 		case 0x1E: ret='a'; break;
 		case 0x30: ret='b'; break;
 		case 0x2E: ret='c'; break;
