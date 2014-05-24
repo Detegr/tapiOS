@@ -57,6 +57,7 @@ static char *handle_escape(char *str)
 	if(elems==1 && outstr)
 	{
 		if(col == 1) bold=true;
+		else if(col==0) bold=false;
 		return outstr;
 	}
 	if(strncmp(str, "\033[H", 3) == 0)

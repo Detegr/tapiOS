@@ -94,8 +94,9 @@ static void printchar(const char c, uint8_t color, bool bold)
 	}
 	else
 	{
+		if(bold) color=0x09;
 		*(video+(row*160)+col)=c;
-		*(video+(row*160)+col+1)=color | ((bold ? 1 : 0) << 3);
+		*(video+(row*160)+col+1)=color;
 		col+=2;
 		if(col>=160)
 		{
