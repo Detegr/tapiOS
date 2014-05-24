@@ -354,16 +354,16 @@ static int read_block(ext2_superblock *sb, struct file *f, uint8_t *block, uint8
 	/* f is an optional parameter because we don't want to modify the position of
 	 * struct file *f when reading doubly or triply indirect blocks.
 	 */
-	uint32_t pos=f?f->pos:0;
+	uint32_t pos=0;
 	uint32_t ret=0;
 	uint32_t blocksize = BLOCKSIZE(sb);
 	for(uint32_t i=0; i<blocksize; ++i, ++ret)
 	{
 		if(i == count) break;
-		else if(f && pos >= f->inode->size) break;
+		else if(f && (pos + f->pos) >= f->inode->size) break;
 		to[pos++]=block[i];
 	}
-	if(f) f->pos=pos;
+	if(f) f->pos+=pos;
 	return ret;
 }
 
@@ -373,7 +373,7 @@ static int read_indirect_block(ext2_superblock *sb, struct file *f, uint32_t *bl
 	uint32_t blockcount = BLOCKSIZE(sb) >> 2; // Blocksize / sizeof(char*)
 	for(uint32_t i=0; i<blockcount; ++i)
 	{
-		ret+=read_block(sb, f, get_block(sb, blocks[i]), to, count-ret);
+		ret+=read_block(sb, f, get_block(sb, blocks[i]), to+ret, count-ret);
 		if(ret >= count || f->pos >= f->inode->size) break;
 	}
 	return ret;
@@ -381,25 +381,26 @@ static int read_indirect_block(ext2_superblock *sb, struct file *f, uint32_t *bl
 
 static int read_blocks(ext2_superblock *sb, struct file *f, uint8_t *to, uint32_t *blocks, uint32_t count)
 {
+	int blocksize=BLOCKSIZE(sb);
 	int ret=0;
 	if(f->pos >= f->inode->size) return 0;
-	for(int b=0; b<=FINAL_DIRECT_BLOCK; ++b)
+	for(int b=f->pos/blocksize; b<=FINAL_DIRECT_BLOCK; ++b)
 	{
-		ret+=read_block(sb, f, get_block(sb, blocks[b]), to, count-ret);
+		ret+=read_block(sb, f, get_block(sb, blocks[b]), to+ret, count-ret);
 		if(ret >= count || f->pos >= f->inode->size) break;
 	}
-	if(blocks[SINGLY_INDIRECT_BLOCK])
+	if(blocks[SINGLY_INDIRECT_BLOCK] && f->pos >= 12*blocksize)
 	{
-		ret+=read_indirect_block(sb, f, get_block(sb, blocks[SINGLY_INDIRECT_BLOCK]), to, count-ret);
+		ret+=read_indirect_block(sb, f, get_block(sb, blocks[SINGLY_INDIRECT_BLOCK]), to+ret, count-ret);
 	}
-	if(blocks[DOUBLY_INDIRECT_BLOCK])
+	if(blocks[DOUBLY_INDIRECT_BLOCK] && f->pos >= 12*blocksize + 256*blocksize)
 	{
 		uint32_t *doubly_indirect_block=kmalloc(BLOCKSIZE(sb) * sizeof(uint32_t));
 		memset(doubly_indirect_block, 0, BLOCKSIZE(sb) * sizeof(uint32_t));
 		read_block(sb, NULL, get_block(sb, blocks[DOUBLY_INDIRECT_BLOCK]), (uint8_t*)doubly_indirect_block, BLOCKSIZE(sb));
 		for(uint32_t i=0; i<BLOCKSIZE(sb); ++i)
 		{
-			ret+=read_indirect_block(sb, f, get_block(sb, doubly_indirect_block[i]), to, count-ret);
+			ret+=read_indirect_block(sb, f, get_block(sb, doubly_indirect_block[i]), to+ret, count-ret);
 		}
 		kfree(doubly_indirect_block);
 	}
