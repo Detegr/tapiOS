@@ -20,6 +20,7 @@
 #include <drivers/tty.h>
 #include <drivers/keyboard.h>
 #include <drivers/pci.h>
+#include <drivers/rtl8139.h>
 
 #define KERNEL_VMA 0xC0000000
 
@@ -85,6 +86,7 @@ void kmain(struct multiboot* b, uint32_t magic)
 		vfs_mount(devfs, devfs_root);
 		register_tty_driver();
 		register_kbd_driver();
+		register_rtl8139_driver();
 	}
 	else kprintf("Could not mount /dev, no such directory\n");
 

@@ -13,7 +13,7 @@ extern void _kb_int(void);
 extern void _noop_int(void);
 extern void _panic(void);
 
-inline void outb(uint16_t port, uint16_t src)
+inline void outb(uint16_t port, uint8_t src)
 {
 	_outb(port, src);
 }
