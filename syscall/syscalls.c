@@ -13,6 +13,8 @@
 #include <sys/ioctl.h>
 #include <sys/termios.h>
 #include <sys/poll.h>
+#include <drivers/rtl8139.h>
+#include <dev/pci.h>
 
 extern void _return_from_exec(void);
 extern void _return_to_userspace(void);
@@ -34,13 +36,14 @@ int _fcntl(int fd, int cmd, int arg);
 int _ioctl(int fd, int req, void *argp);
 int _poll(struct pollfd *fds, nfds_t nfds, int timeout);
 int _mkdir(const char* path, mode_t mode);
+int _tx_test(const char *msg, size_t len);
 
 typedef int(*syscall_ptr)();
 syscall_ptr syscalls[]={
 	&_exit, &_write, &_read, (syscall_ptr)&_sbrk,
 	&_open, &_dup2, &_readdir,
 	&fork, &_waitpid, &_exec, &_fcntl, &getpid, &_fstat,
-	&_getcwd, &_chdir, &_close, &_ioctl, &_poll, &_mkdir
+	&_getcwd, &_chdir, &_close, &_ioctl, &_poll, &_mkdir, &_tx_test
 };
 
 int _exit(int code)
@@ -416,6 +419,13 @@ int _mkdir(const char *path, mode_t mode)
 	}
 	struct inode *newdir=vfs_new_inode(dir, path, 0x4000);
 	if(!newdir) return -EPERM;
+	return 0;
+}
+
+int _tx_test(const char *msg, size_t len)
+{
+	struct rtl8139 *rtl=pci_get_device(0x10EC, 0x8139)->device;
+	rtl8139_tx(rtl, (const uint8_t*)msg, len);
 	return 0;
 }
 

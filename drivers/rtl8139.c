@@ -6,6 +6,8 @@
 
 #define MAC0 0x0
 #define MAR0 0x8
+#define TXSTAT 0x10
+#define TXBUF 0x20
 #define RBSTART 0x30
 #define CMD 0x37
 #define CAPR 0x38
@@ -19,20 +21,9 @@
 
 #define RXBUF_LEN 8192
 #define MTU 1500
-#define TXBUF_LEN RXBUF_LEN
 
-struct rtl8139
-{
-	uint8_t bus;
-	uint8_t device;
-	uint32_t io_base;
-	uint8_t irq;
-	uint8_t mac[6];
-
-	uint8_t *rx_buf;
-	uint16_t rx_pos;
-	uint8_t *tx_buf;
-};
+#define ROK 1
+#define TOK 4
 
 static void populate_rtl8139(struct pci_device *pdev, struct rtl8139 *dev)
 {
@@ -41,8 +32,14 @@ static void populate_rtl8139(struct pci_device *pdev, struct rtl8139 *dev)
 	dev->io_base=pci_config_read_dword(dev->bus, dev->device, 0, PCI_BAR0) & 0xFFFFFFFC;
 	dev->irq=pci_config_read_word(dev->bus, dev->device, 0, PCI_INTERRUPT_LINE);
 	dev->rx_buf=kmalloc(RXBUF_LEN+MTU+16);
-	dev->tx_buf=kmalloc(TXBUF_LEN);
+	for(int i=0; i<4; ++i)
+	{
+		dev->tx_buf[i]=kmalloc(2048);
+	}
+	dev->tx_pos=0;
+	dev->tx_buffers_free=4;
 	dev->rx_pos=0;
+
 	for(int i=0; i<6; ++i)
 	{
 		dev->mac[i]=inb(dev->io_base+MAC0+i);
@@ -103,23 +100,46 @@ void irq11_handler(void)
 	struct rtl8139 *rtl=pci_get_device(0x10EC, 0x8139)->device; // TODO: How to do multiple devices?
 	uint16_t status=inw(rtl->io_base+ISR);
 	outdw(rtl->io_base+ISR, status);
-	while((inw(rtl->io_base+CMD) & RXBUF_EMPTY) == 0)
+	if(status & ROK)
 	{
-		kprintf("rtl status: %d, pos %d\n", status, rtl->rx_pos);
-		kprintf("status from packet: %d\n", *(uint16_t*)(rtl->rx_buf + rtl->rx_pos));
-		uint16_t rx_len=*(uint16_t*)(rtl->rx_buf + rtl->rx_pos + 2);
-		kprintf("packet length: %d\n", rx_len);
-		for(int i=rtl->rx_pos; i<rtl->rx_pos+rx_len; i+=2)
+		while((inw(rtl->io_base+CMD) & RXBUF_EMPTY) == 0)
 		{
-			kprintf("%X ", *(uint8_t*)(rtl->rx_buf+i+1));
-			kprintf("%X ", *(uint8_t*)(rtl->rx_buf+i));
-		}
-		kprintf("\n");
+			kprintf("rtl status: %d, pos %d\n", status, rtl->rx_pos);
+			kprintf("status from packet: %d\n", *(uint16_t*)(rtl->rx_buf + rtl->rx_pos));
+			uint16_t rx_len=*(uint16_t*)(rtl->rx_buf + rtl->rx_pos + 2);
+			kprintf("packet length: %d\n", rx_len);
+			for(int i=rtl->rx_pos; i<rtl->rx_pos+rx_len; i+=2)
+			{
+				kprintf("%X ", *(uint8_t*)(rtl->rx_buf+i+1));
+				kprintf("%X ", *(uint8_t*)(rtl->rx_buf+i));
+			}
+			kprintf("\n");
 
-		// Update CAPR. This is some higher level magic found from the manual
-		// +4 is the header, +3 is dword alignment
-		rtl->rx_pos=(rtl->rx_pos + rx_len + 4 + 3) & RX_READ_POINTER_MASK;
-		outw(rtl->io_base + CAPR, rtl->rx_pos - 0x10);
-		rtl->rx_pos%=0x2000;
+			// Update CAPR. This is some higher level magic found from the manual
+			// +4 is the header, +3 is dword alignment
+			rtl->rx_pos=(rtl->rx_pos + rx_len + 4 + 3) & RX_READ_POINTER_MASK;
+			outw(rtl->io_base + CAPR, rtl->rx_pos - 0x10);
+			rtl->rx_pos%=0x2000;
+		}
 	}
+	if(status & TOK)
+	{
+		kprintf("Transmit OK\n");
+	}
+}
+
+void rtl8139_tx(struct rtl8139 *rtl, const uint8_t *data, size_t len)
+{
+	if(len<60)
+	{
+		kprintf("ERR: Will not transmit! Len<60\n");
+		return;
+	}
+	memcpy(rtl->tx_buf[rtl->tx_pos], data, len);
+	outdw(rtl->io_base+TXBUF + (4*rtl->tx_pos), vaddr_to_physaddr((vaddr_t)rtl->tx_buf[rtl->tx_pos]));
+	// Clears the OWN bit and sets the length,
+	// sets the early transmit treshold to 8 bytes
+	outdw(rtl->io_base+TXSTAT + (4*rtl->tx_pos), len & 0xFFF);
+	rtl->tx_pos = (rtl->tx_pos + 1) % 4;
+	rtl->tx_buffers_free--;
 }
