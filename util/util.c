@@ -7,6 +7,7 @@ extern void _outb(uint16_t dest, uint8_t src);
 extern void _outw(uint16_t dest, uint16_t src);
 extern void _outdw(uint16_t dest, uint32_t src);
 extern uint8_t _inb(uint16_t port);
+extern uint16_t _inw(uint16_t port);
 extern uint32_t _indw(uint16_t port);
 extern void _io_wait(void);
 extern void _kb_int(void);
@@ -31,6 +32,12 @@ inline void outdw(uint16_t port, uint32_t src)
 uint8_t inb(uint16_t port)
 {
 	register uint8_t i=_inb(port);
+	return i;
+}
+
+uint16_t inw(uint16_t port)
+{
+	register uint16_t i=_inw(port);
 	return i;
 }
 

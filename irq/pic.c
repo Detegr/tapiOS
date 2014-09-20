@@ -17,6 +17,7 @@
 uint8_t pic_get_irq(void)
 {
 	outb(PIC1, 0x0B);
+	outb(PIC2, 0x0B);
 	uint8_t data=inb(PIC1);
 	uint8_t i;
 	uint8_t bit;
@@ -27,7 +28,7 @@ uint8_t pic_get_irq(void)
 	data=inb(PIC2);
 	for(i=data; i!=0; i>>=1, bit++)
 	{
-		if(i & 0x1) return bit;
+		if(i & 0x1) return bit+0x8;
 	}
 	return 0xFF;
 }
@@ -69,8 +70,8 @@ void remap_pic(uint8_t offset1, uint8_t offset2)
 	outb(PIC1_DATA, ICW4_80X86_MODE);
 	outb(PIC2_DATA, ICW4_80X86_MODE);
 
-	outb(PIC1_DATA, 0xFC); // Use IRQ0 and IRQ1
-	outb(PIC2_DATA, 0xFF);
+	outb(PIC1_DATA, 0x00); // Enable IRQ0,IRQ1
+	outb(PIC2_DATA, 0x00); // and IRQ11
 
 	__asm__ __volatile__("sti\n");
 }

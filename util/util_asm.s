@@ -7,6 +7,7 @@ global _io_wait
 global _idle
 global _panic
 global _inb
+global _inw
 global _indw
 global _get_eip
 global _return_to_userspace
@@ -39,6 +40,11 @@ _outdw:
 _inb:
 	mov edx, [esp+4]
 	in al, dx
+	ret
+
+_inw:
+	mov edx, [esp+4]
+	in ax, dx
 	ret
 
 _indw:

@@ -13,6 +13,7 @@
 
 extern void _timer_handler(void);
 extern void _irq1_handler(void);
+extern void _irq11_handler(void);
 extern void _page_fault(void);
 extern void _noop_int(void);
 
@@ -67,6 +68,7 @@ void setup_idt(void)
 	idtentry(0x20, (uint32_t)&_timer_handler, KERNEL_CODE_SEGMENT, GATE_INT32);
 	idtentry(0x21, (uint32_t)&_irq1_handler, KERNEL_CODE_SEGMENT, GATE_INT32);
 	idtentry(0x27, (uint32_t)&_spurious_irq_check_master, KERNEL_CODE_SEGMENT, GATE_INT32);
+	idtentry(0x2B, (uint32_t)&_irq11_handler, KERNEL_CODE_SEGMENT, GATE_INT32);
 	idtentry(0x2F, (uint32_t)&_spurious_irq_check_slave, KERNEL_CODE_SEGMENT, GATE_INT32);
 	idtentry(0x80, (uint32_t)&_syscall, KERNEL_CODE_SEGMENT, GATE_INT32_USER_PRIVILEGE);
 

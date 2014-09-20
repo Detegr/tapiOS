@@ -159,6 +159,11 @@ static void printix(uint32_t x, int color)
 		printchar(halfbytetohex((x>>i) & 0x0F), color, false);
 	}
 }
+static void printbx(uint8_t x, int color)
+{
+	printchar(halfbytetohex((x>>4) & 0x0F), color, false);
+	printchar(halfbytetohex(x & 0x0F), color, false);
+}
 
 static void printi(uint32_t i, int color)
 {
@@ -193,6 +198,12 @@ void kprintf(const char* fmt, ...)
 				{
 					int i=va_arg(argp, int);
 					printix(i, color);
+					break;
+				}
+				case 'X':
+				{
+					int i=va_arg(argp, int);
+					printbx(i, color);
 					break;
 				}
 				case 'c':

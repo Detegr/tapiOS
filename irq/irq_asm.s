@@ -38,6 +38,7 @@ extern pic_get_irq
 
 IRQ_HANDLER _timer_handler, timer_handler
 IRQ_HANDLER _irq1_handler, irq1_handler
+IRQ_HANDLER _irq11_handler, irq11_handler
 IRQ_HANDLER _page_fault, page_fault
 
 global _syscall
