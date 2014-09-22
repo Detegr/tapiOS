@@ -3,6 +3,7 @@
 #include <dev/pci.h>
 #include <mem/vmm.h>
 #include <mem/kmalloc.h>
+#include <network/ethernet.h>
 
 #define MAC0 0x0
 #define MAR0 0x8
@@ -108,12 +109,26 @@ void irq11_handler(void)
 			kprintf("status from packet: %d\n", *(uint16_t*)(rtl->rx_buf + rtl->rx_pos));
 			uint16_t rx_len=*(uint16_t*)(rtl->rx_buf + rtl->rx_pos + 2);
 			kprintf("packet length: %d\n", rx_len);
+			/*
 			for(int i=rtl->rx_pos; i<rtl->rx_pos+rx_len; i+=2)
 			{
 				kprintf("%X ", *(uint8_t*)(rtl->rx_buf+i+1));
 				kprintf("%X ", *(uint8_t*)(rtl->rx_buf+i));
 			}
-			kprintf("\n");
+			kprintf("\n");*/
+
+			// Handle the packet and send reply if needed
+			size_t reply_len;
+			struct ethernet_header *ehdr=(struct ethernet_header*)(rtl->rx_buf + rtl->rx_pos + 4);
+			switch(ehdr->ethertype)
+			{
+				case IPV4:
+					break;
+				case ARP:
+					rtl8139_tx(rtl, arp_handle_frame(rtl->rx_buf + rtl->rx_pos + 4 + sizeof(struct ethernet_header), rx_len, &reply_len), reply_len);
+					kprintf("Sent reply to ARP, length: %d\n", reply_len);
+					break;
+			}
 
 			// Update CAPR. This is some higher level magic found from the manual
 			// +4 is the header, +3 is dword alignment
@@ -128,8 +143,9 @@ void irq11_handler(void)
 	}
 }
 
-void rtl8139_tx(struct rtl8139 *rtl, const uint8_t *data, size_t len)
+void rtl8139_tx(struct rtl8139 *rtl, const void *data, size_t len)
 {
+	if(data==NULL) return;
 	if(len<60)
 	{
 		kprintf("ERR: Will not transmit! Len<60\n");

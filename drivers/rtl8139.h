@@ -20,6 +20,6 @@ struct rtl8139
 };
 
 void register_rtl8139_driver(void);
-void rtl8139_tx(struct rtl8139 *rtl, const uint8_t *data, size_t len);
+void rtl8139_tx(struct rtl8139 *rtl, const void *data, size_t len);
 
 #endif
