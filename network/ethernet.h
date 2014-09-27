@@ -3,8 +3,16 @@
 
 #include <util/util.h>
 
-#define IPV4 0x8000
+#define IPV4 0x0800
 #define ARP 0x0608
+
+// TODO: Read these from a config file of some sort
+#define MY_IP 0x200000A
+#define SUBNET_MASK 0x00FFFFFF
+#define DEFAULT_GW 0x100000A
+
+#define ARP_REQUEST 0x0100
+#define ARP_REPLY 0x0200
 
 struct ethernet_header
 {
@@ -26,7 +34,13 @@ struct arp_header
 	uint32_t target_ip;
 } __attribute__((packed));
 
-struct arp_header arp_reply;
-struct arp_header *arp_handle_frame(uint8_t *data, size_t len, size_t *outlen);
+struct arp_packet
+{
+	struct ethernet_header eth_header;
+	struct arp_header arp_header;
+} __attribute__ ((packed));
+
+void *ethernet_handle_frame(uint8_t *data, size_t len, size_t *reply_len);
+struct arp_packet *arp_handle_frame(uint8_t *data, size_t len, size_t *outlen);
 
 #endif

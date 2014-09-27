@@ -119,15 +119,12 @@ void irq11_handler(void)
 
 			// Handle the packet and send reply if needed
 			size_t reply_len;
-			struct ethernet_header *ehdr=(struct ethernet_header*)(rtl->rx_buf + rtl->rx_pos + 4);
-			switch(ehdr->ethertype)
+			uint8_t *data=rtl->rx_buf + rtl->rx_pos + 4;
+			void *reply=ethernet_handle_frame(data, rx_len, &reply_len);
+			if(reply)
 			{
-				case IPV4:
-					break;
-				case ARP:
-					rtl8139_tx(rtl, arp_handle_frame(rtl->rx_buf + rtl->rx_pos + 4 + sizeof(struct ethernet_header), rx_len, &reply_len), reply_len);
-					kprintf("Sent reply to ARP, length: %d\n", reply_len);
-					break;
+				rtl8139_tx(rtl, reply, reply_len);
+				kfree(reply);
 			}
 
 			// Update CAPR. This is some higher level magic found from the manual
@@ -146,12 +143,12 @@ void irq11_handler(void)
 void rtl8139_tx(struct rtl8139 *rtl, const void *data, size_t len)
 {
 	if(data==NULL) return;
-	if(len<60)
-	{
-		kprintf("ERR: Will not transmit! Len<60\n");
-		return;
-	}
 	memcpy(rtl->tx_buf[rtl->tx_pos], data, len);
+	if(len<60)
+	{// Pad with zeros until the length is long enough
+		memset(rtl->tx_buf[rtl->tx_pos] + len, 0, 60-len);
+		len=60;
+	}
 	outdw(rtl->io_base+TXBUF + (4*rtl->tx_pos), vaddr_to_physaddr((vaddr_t)rtl->tx_buf[rtl->tx_pos]));
 	// Clears the OWN bit and sets the length,
 	// sets the early transmit treshold to 8 bytes

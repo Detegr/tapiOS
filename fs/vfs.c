@@ -69,6 +69,12 @@ struct inode *vfs_search(struct inode *node, const char *name)
 
 struct inode *vfs_new_inode(struct inode *dir, const char *path, int flags)
 {
+	if(!dir)
+	{// Orphan inode
+		struct inode *ret=kmalloc(sizeof(struct inode));
+		memset(ret, 0, sizeof(struct inode));
+		return ret;
+	}
 	if(dir->i_act->new)
 	{
 		struct inode *ret=dir->i_act->new(dir, path, flags);

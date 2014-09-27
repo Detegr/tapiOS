@@ -4,6 +4,7 @@
 #include <sys/times.h>
 #include <sys/time.h>
 #include <sys/poll.h>
+#include <sys/socket.h>
 #include <errno.h>
 #include <stdio.h>
 #include <signal.h>
@@ -33,6 +34,7 @@
 #define IOCTL 17
 #define POLL 18
 #define MKDIR 19
+#define SOCKET 20
 
 #define SYSCALL0(n) \
 	int ret; \
@@ -419,4 +421,9 @@ int sigsuspend(const sigset_t *mask)
 int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)
 {
 	return -1;
+}
+
+int socket(int domain, int type, int protocol)
+{
+	SYSCALL3(SOCKET, domain, type, protocol);
 }

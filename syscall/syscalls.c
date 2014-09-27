@@ -36,14 +36,14 @@ int _fcntl(int fd, int cmd, int arg);
 int _ioctl(int fd, int req, void *argp);
 int _poll(struct pollfd *fds, nfds_t nfds, int timeout);
 int _mkdir(const char* path, mode_t mode);
-int _tx_test(const char *msg, size_t len);
+int _socket(int domain, int type, int protocol);
 
 typedef int(*syscall_ptr)();
 syscall_ptr syscalls[]={
 	&_exit, &_write, &_read, (syscall_ptr)&_sbrk,
 	&_open, &_dup2, &_readdir,
 	&fork, &_waitpid, &_exec, &_fcntl, &getpid, &_fstat,
-	&_getcwd, &_chdir, &_close, &_ioctl, &_poll, &_mkdir, &_tx_test
+	&_getcwd, &_chdir, &_close, &_ioctl, &_poll, &_mkdir, &_socket
 };
 
 int _exit(int code)
@@ -422,11 +422,13 @@ int _mkdir(const char *path, mode_t mode)
 	return 0;
 }
 
-int _tx_test(const char *msg, size_t len)
+int _socket(int domain, int type, int protocol)
 {
-	struct rtl8139 *rtl=pci_get_device(0x10EC, 0x8139)->device;
-	rtl8139_tx(rtl, (const uint8_t*)msg, len);
-	return 0;
+	struct inode *inode=vfs_new_inode(NULL, NULL, 0);
+	int status;
+	struct file *f=vfs_open(inode, &status, 0);
+	if(status!=0) return -status;
+	return newfd(f);
 }
 
 void syscall(void *v)
