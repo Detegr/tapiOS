@@ -60,7 +60,6 @@ void kmain(struct multiboot* b, uint32_t magic)
 	hide_cursor();
 	cls();
 	setup_gdt();
-	setup_pic();
 	setup_idt();
 	if(b->mods_count == 1)
 	{
@@ -70,6 +69,7 @@ void kmain(struct multiboot* b, uint32_t magic)
 	}
 	setup_bitmap();
 	setup_vmm();
+	setup_pic();
 	setup_tasking();
 	setup_process_tree();
 	set_timer_freq(100);

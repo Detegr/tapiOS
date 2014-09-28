@@ -78,7 +78,7 @@ void setup_gdt(void)
 	gdtptr.base=(unsigned int)&gdt;
 	setgdt(&gdtptr);
 	__asm__ volatile(
-		"mov ax, 0x2B;" // 5(gdt entry num)*8(bytes) | 0x03 (privilege level)
+		"mov ax, 0x2B;" // 5(gdt entry num)*8(bytes) | 0x03 (privilege level)
 		"ltr ax;" // Load task state register
 	);
 	print_startup_info("GDT", true);

@@ -16,6 +16,7 @@
 #define USER_DATA_SEGMENT 0x20
 
 #define DIV_ROUND_UP(n,d) (n/d + (n%d != 0))
+#define GET_LSB(out, from) __asm__ volatile("bsr %0, %1" : "=g"(out) : "g"(from));
 #define GET_AND_SET_MSB(out, bitmap_uint32_addr) \
 	__asm__ volatile("bsf %0, %1" : "=g"(out) : "g"(*bitmap_uint32_addr)); \
 	if(out > 0) *bitmap_uint32_addr |= 1<<(out-1); \

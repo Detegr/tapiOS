@@ -13,10 +13,7 @@
 	mov es, ax
 	mov fs, ax
 	mov gs, ax
-	mov eax, [esp+52] ; Push possible error code
-	push eax
 	call %2
-	pop eax ; Pop error code
 	call pic_get_irq
 	pop gs
 	pop fs
@@ -37,9 +34,29 @@ extern is_spurious_irq_slave
 extern pic_get_irq
 
 IRQ_HANDLER _timer_handler, timer_handler
-IRQ_HANDLER _irq1_handler, irq1_handler
-IRQ_HANDLER _irq11_handler, irq11_handler
 IRQ_HANDLER _page_fault, page_fault
+
+global _generic_isr
+extern generic_isr
+_generic_isr:
+	cli
+	pushad
+	push ds
+	push es
+	push fs
+	push gs
+	mov ax, 0x10
+	mov ds, ax
+	mov es, ax
+	mov fs, ax
+	mov gs, ax
+	call generic_isr
+	call pic_get_irq
+	pop gs
+	pop fs
+	pop es
+	pop ds
+	jmp send_eoi
 
 global _syscall
 extern syscall

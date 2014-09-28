@@ -1,4 +1,6 @@
 #include "irq.h"
+#include "idt.h"
+#include "pic.h"
 #include <task/tss.h>
 #include <task/scheduler.h>
 #include <util/scancodes.h>
@@ -7,60 +9,46 @@
 #include <syscall/syscalls.h>
 #include <stdint.h>
 #include <drivers/keyboard.h>
+#include <mem/kmalloc.h>
 
-void timer_handler(void)
+extern void _generic_isr(void*);
+
+void register_isr(int irq, isr_function func, void *data)
 {
-	if(!current_process) return;
+	volatile struct isr *isr=isrs;
+	if(isr)
+	{
+		while(isr->next) isr=isr->next;
+		isr->next=kmalloc(sizeof(struct isr));
+		isr=isr->next;
+	}
+	else
+	{
+		isr=kmalloc(sizeof(struct isr));
+		isrs=isr;
+	}
+	isr->irq=irq;
+	isr->func=func;
+	isr->data=data;
+	isr->next=NULL;
 
-	struct process *new_process=get_next_process();
-	struct process *old_process=(struct process*)current_process;
-	if(!new_process || old_process == new_process) return;
-
-	current_process=new_process;
-	physaddr_t pageaddr=get_page((vaddr_t)new_process->pdir) & 0xFFFFF000;
-	tss.esp0=((vaddr_t)current_process->esp0)+KERNEL_STACK_SIZE;
-
-	/* Handle EOI before switching the process */
-	__asm__ volatile(
-		"call pic_get_irq;"
-		"cmp al, 0xFF;"
-		"je _panic;"
-		"mov bl, al;"
-		"mov al, 0x20;"
-		"out 0x20, al;"
-		"cmp bl, 0x8;"
-		"jge .send_slave;"
-		"jmp .finish;"
-		".send_slave: out 0xA0, al;"
-		".finish:");
-	/* Save 8 general purpose registers, save old kernel stack pointer
-	 * and switch kernel stack pointers. Also change the page directory to
-	 * the switced process' page directory. */
-	__asm__ volatile(
-		"lea edx, 1f;"
-		"push edx;"
-		"pusha;"
-		"lea edx, %0;"
-		"mov [edx], esp;"
-		"mov cr3, %2;"
-		"mov esp, %1;"
-		"popa;"
-		"ret;"
-		"1:" :: "m"(old_process->kesp), "b"(new_process->kesp), "c"(pageaddr));
+	idtentry(0x20 + irq, (uint32_t)&_generic_isr, KERNEL_CODE_SEGMENT, GATE_INT32);
 }
 
-void irq1_handler(void)
+void generic_isr(void *data)
 {
-	uint8_t status=inb(0x64);
-	if(status & 0x1)
+	volatile struct isr *isr=isrs;
+	int irq=pic_get_irq();
+	while(isr && isr->irq != irq)
 	{
-		uint8_t scancode=inb(0x60);
-		struct process* p=find_active_process();
-		if(!p) return; // No active userspace process, nothing to do
-		char c=char_for_scancode(scancode);
-		if(c==CHAR_UNHANDLED||c==CHAR_UP) return;
-		kbd_buffer_push(c);
+		isr=(volatile struct isr*)isr->next;
 	}
+	if(!isr)
+	{
+		kprintf("No ISR found for IRQ %d\n", irq);
+		PANIC();
+	}
+	isr->func(isr->data, (struct registers*)&data);
 }
 
 void page_fault(int errno)

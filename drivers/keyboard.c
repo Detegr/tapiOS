@@ -3,6 +3,7 @@
 #include <util/util.h>
 #include <util/scancodes.h>
 #include <task/process.h>
+#include <irq/irq.h>
 
 #include "keyboard.h"
 
@@ -42,6 +43,20 @@ int32_t kbd_read(struct file *f, void *top, uint32_t count)
 	return count;
 }
 
+static void keyboard_isr(void *data, struct registers *regs)
+{
+	uint8_t status=inb(0x64);
+	if(status & 0x1)
+	{
+		uint8_t scancode=inb(0x60);
+		struct process* p=find_active_process();
+		if(!p) return; // No active userspace process, nothing to do
+		char c=char_for_scancode(scancode);
+		if(c==CHAR_UNHANDLED||c==CHAR_UP) return;
+		kbd_buffer_push(c);
+	}
+}
+
 void register_kbd_driver(void)
 {
 	memset(kbd_buffer, 0, KBD_BUFFER_SIZE);
@@ -50,4 +65,6 @@ void register_kbd_driver(void)
 	register_device(KEYBOARD, &kbd_fact, &kbd_iact);
 	struct inode *devfs=vfs_search((struct inode*)root_fs, "/dev");
 	devfs_mknod(devfs, "keyboard", KEYBOARD, 0);
+
+	register_isr(1, &keyboard_isr, NULL);
 }

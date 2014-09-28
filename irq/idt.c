@@ -1,18 +1,10 @@
 #include "idt.h"
 #include "gdt.h"
+#include "irq.h"
 #include <terminal/vga.h>
 #include <stdint.h>
 #include <util/util.h>
 
-// Interrupt types
-#define GATE_INT32 0x8E
-#define GATE_INT32_USER_PRIVILEGE 0xEE // 0x83 | 0x60
-#define TRAP_INT32 0x8F
-
-/* Irq handlers defined in irq_asm.s */
-
-extern void _timer_handler(void);
-extern void _irq1_handler(void);
 extern void _irq11_handler(void);
 extern void _page_fault(void);
 extern void _noop_int(void);
@@ -41,7 +33,7 @@ struct idt_ptr
 struct idt_entry idt[256];
 struct idt_ptr idtptr;
 
-static void idtentry(int n, uint32_t offset, uint16_t selector, uint8_t type)
+void idtentry(int n, uint32_t offset, uint16_t selector, uint8_t type)
 {
 	struct idt_entry* ie=&idt[n];
 	ie->offset_low = offset & 0xFFFF;
@@ -63,12 +55,10 @@ void setup_idt(void)
 	{
 		idtentry(i, (uint32_t)&_noop_int, KERNEL_CODE_SEGMENT, GATE_INT32);
 	}
+	isrs=NULL;
 
 	idtentry(0x0E, (uint32_t)&_page_fault, KERNEL_CODE_SEGMENT, TRAP_INT32);
-	idtentry(0x20, (uint32_t)&_timer_handler, KERNEL_CODE_SEGMENT, GATE_INT32);
-	idtentry(0x21, (uint32_t)&_irq1_handler, KERNEL_CODE_SEGMENT, GATE_INT32);
 	idtentry(0x27, (uint32_t)&_spurious_irq_check_master, KERNEL_CODE_SEGMENT, GATE_INT32);
-	idtentry(0x2B, (uint32_t)&_irq11_handler, KERNEL_CODE_SEGMENT, GATE_INT32);
 	idtentry(0x2F, (uint32_t)&_spurious_irq_check_slave, KERNEL_CODE_SEGMENT, GATE_INT32);
 	idtentry(0x80, (uint32_t)&_syscall, KERNEL_CODE_SEGMENT, GATE_INT32_USER_PRIVILEGE);
 
