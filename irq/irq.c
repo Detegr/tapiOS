@@ -33,6 +33,17 @@ void register_isr(int irq, isr_function func, void *data)
 	isr->next=NULL;
 
 	idtentry(0x20 + irq, (uint32_t)&_generic_isr, KERNEL_CODE_SEGMENT, GATE_INT32);
+
+	// Unmask PIC interrupts for this IRQ
+	uint8_t pic1mask=inb(PIC1_DATA);
+	if(irq>8)
+	{
+		outb(PIC1_DATA, pic1mask & (0xFF-0x4));
+		irq-=8;
+		uint8_t pic2mask=inb(PIC2_DATA);
+		outb(PIC2_DATA, pic2mask & (0xFF-(1 << irq)));
+	}
+	else outb(PIC1_DATA, pic1mask & (0xFF-(1 << irq)));
 }
 
 void generic_isr(void *data)

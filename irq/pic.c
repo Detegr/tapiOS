@@ -9,11 +9,6 @@
 
 extern void _timer_handler(void);
 
-#define PIC1 0x20
-#define PIC1_DATA 0x21
-#define PIC2 0xA0
-#define PIC2_DATA 0xA1
-
 #define ICW4_NEEDED 0x1
 #define ICW1_INIT 0x10
 
@@ -75,8 +70,8 @@ void remap_pic(uint8_t offset1, uint8_t offset2)
 	outb(PIC2_DATA, ICW4_80X86_MODE);
 
 	// Interrupt masks
-	outb(PIC1_DATA, 0x00);
-	outb(PIC2_DATA, 0x00);
+	outb(PIC1_DATA, 0xFF-0x1); // 0x1 is timer
+	outb(PIC2_DATA, 0xFF);
 
 	__asm__ __volatile__("sti\n");
 }
