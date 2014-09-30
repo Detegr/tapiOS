@@ -143,6 +143,12 @@ int32_t vfs_close(struct file *f)
 	if(--f->refcount == 0 && f->inode)
 	{
 		if(f->inode == root_fs) return 0;
+		if(!f->inode->parent)
+		{
+			kprintf("Freeing orphan inode (socket)\n");
+			kfree(f->inode);
+			return 0;
+		}
 		struct inode *i=f->inode->parent->children;
 		while(i)
 		{

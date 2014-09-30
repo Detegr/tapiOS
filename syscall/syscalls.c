@@ -15,6 +15,7 @@
 #include <sys/poll.h>
 #include <drivers/rtl8139.h>
 #include <dev/pci.h>
+#include <network/netdev.h>
 
 extern void _return_from_exec(void);
 extern void _return_to_userspace(void);
@@ -424,10 +425,15 @@ int _mkdir(const char *path, mode_t mode)
 
 int _socket(int domain, int type, int protocol)
 {
+	if(!network_devices) return -EINVAL;
 	struct inode *inode=vfs_new_inode(NULL, NULL, 0);
+	inode->f_act=kmalloc(sizeof(struct file_actions));
+	inode->f_act->write=(int32_t (*)(struct file*, void*, uint32_t))network_devices->n_act->tx;
 	int status;
-	struct file *f=vfs_open(inode, &status, 0);
-	if(status!=0) return -status;
+	struct file *f=kmalloc(sizeof(struct file)); // Will be freed on close
+	f->refcount=1;
+	f->inode=inode;
+	f->pos=0;
 	return newfd(f);
 }
 

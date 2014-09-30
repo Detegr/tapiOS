@@ -5,6 +5,7 @@
 #include <mem/vmm.h>
 #include <mem/kmalloc.h>
 #include <network/ethernet.h>
+#include <network/netdev.h>
 
 #define MAC0 0x0
 #define MAR0 0x8
@@ -27,7 +28,12 @@
 #define ROK 1
 #define TOK 4
 
-static void rtl8139_tx(struct rtl8139 *rtl, const void *data, size_t len)
+static int32_t rtl8139_tcp_tx(struct network_device *rtl, const void *data, size_t len)
+{
+	return 0;
+}
+
+static void rtl8139_tx(struct network_device *rtl, const void *data, size_t len)
 {
 	if(data==NULL) return;
 	memcpy(rtl->tx_buf[rtl->tx_pos], data, len);
@@ -46,7 +52,8 @@ static void rtl8139_tx(struct rtl8139 *rtl, const void *data, size_t len)
 
 static void rtl8139_isr(void *rtl_dev, struct registers *regs)
 {
-	struct rtl8139 *rtl=pci_get_device(0x10EC, 0x8139)->device; // TODO: How to do multiple devices?
+	struct network_device *rtl=(struct network_device*)rtl_dev;
+
 	uint16_t status=inw(rtl->io_base+ISR);
 	outdw(rtl->io_base+ISR, status);
 	if(status & ROK)
@@ -57,13 +64,6 @@ static void rtl8139_isr(void *rtl_dev, struct registers *regs)
 			kprintf("status from packet: %d\n", *(uint16_t*)(rtl->rx_buf + rtl->rx_pos));
 			uint16_t rx_len=*(uint16_t*)(rtl->rx_buf + rtl->rx_pos + 2);
 			kprintf("packet length: %d\n", rx_len);
-			/*
-			for(int i=rtl->rx_pos; i<rtl->rx_pos+rx_len; i+=2)
-			{
-				kprintf("%X ", *(uint8_t*)(rtl->rx_buf+i+1));
-				kprintf("%X ", *(uint8_t*)(rtl->rx_buf+i));
-			}
-			kprintf("\n");*/
 
 			// Handle the packet and send reply if needed
 			size_t reply_len;
@@ -88,23 +88,13 @@ static void rtl8139_isr(void *rtl_dev, struct registers *regs)
 	}
 }
 
-
-static void dump_mac_addr(struct rtl8139 *dev)
+static void populate_netdev(struct pci_device *pdev, struct network_device *dev)
 {
-	kprintf("MAC: ");
-	for(int i=0; i<5; ++i)
-	{
-		kprintf("%X:", dev->mac[i]);
-	}
-	kprintf("%X\n", dev->mac[5]);
-}
+	dev->n_act=kmalloc(sizeof(struct network_actions));
+	dev->n_act->tx=&rtl8139_tcp_tx;
 
-static void populate_rtl8139(struct pci_device *pdev, struct rtl8139 *dev)
-{
-	dev->bus=pdev->bus_id;
-	dev->device=pdev->bus_device_id;
-	dev->io_base=pci_config_read_dword(dev->bus, dev->device, 0, PCI_BAR0) & 0xFFFFFFFC;
-	dev->irq=pci_config_read_word(dev->bus, dev->device, 0, PCI_INTERRUPT_LINE);
+	dev->io_base=pci_config_read_dword(pdev->bus_id, pdev->bus_device_id, 0, PCI_BAR0) & 0xFFFFFFFC;
+	dev->irq=pci_config_read_word(pdev->bus_id, pdev->bus_device_id, 0, PCI_INTERRUPT_LINE);
 	dev->rx_buf=kmalloc(RXBUF_LEN+MTU+16);
 	for(int i=0; i<4; ++i)
 	{
@@ -125,15 +115,15 @@ void register_rtl8139_driver(void)
 	struct pci_device *rtl_pdev=pci_get_device(0x10EC, 0x8139);
 	if(rtl_pdev)
 	{
-		struct rtl8139 *rtl=kmalloc(sizeof(struct rtl8139));
-		populate_rtl8139(rtl_pdev, rtl);
+		struct network_device *rtl=kmalloc(sizeof(struct network_device));
+		populate_netdev(rtl_pdev, rtl);
 		rtl_pdev->device=rtl;
 		memset(rtl->rx_buf, 0, RXBUF_LEN+MTU+16);
 		kprintf("RTL8139 IRQ: %d\n", rtl->irq);
 
 		// Enable PCI Bus mastering by setting bit 2 in pci command register
-		uint16_t cmd=pci_config_read_word(rtl->bus, rtl->device, 0, PCI_CMD);
-		pci_config_write_word(rtl->bus, rtl->device, 0, PCI_CMD, cmd|0x4);
+		uint16_t cmd=pci_config_read_word(rtl_pdev->bus_id, rtl_pdev->device_id, 0, PCI_CMD);
+		pci_config_write_word(rtl_pdev->bus_id, rtl_pdev->device_id, 0, PCI_CMD, cmd|0x4);
 
 		// Power-on device by sending 0x0 to config register
 		outb(rtl->io_base+CFG, 0x0);
@@ -154,9 +144,10 @@ void register_rtl8139_driver(void)
 		// Allow accepting and transmitting packets
 		outb(rtl->io_base+CMD, 0x0C);
 
-		register_isr(rtl->irq, &rtl8139_isr, rtl);
-
 		dump_mac_addr(rtl);
+
+		register_isr(rtl->irq, &rtl8139_isr, rtl);
+		register_network_device(rtl);
 	}
 	print_startup_info("RTL8139", rtl_pdev!=NULL);
 }
