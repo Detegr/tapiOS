@@ -428,7 +428,8 @@ int _socket(int domain, int type, int protocol)
 	if(!network_devices) return -EINVAL;
 	struct inode *inode=vfs_new_inode(NULL, NULL, 0);
 	inode->f_act=kmalloc(sizeof(struct file_actions));
-	inode->f_act->write=(int32_t (*)(struct file*, void*, uint32_t))network_devices->n_act->tx;
+	inode->f_act->write=network_devices->n_act->tx;
+	inode->device=network_devices;
 	int status;
 	struct file *f=kmalloc(sizeof(struct file)); // Will be freed on close
 	f->refcount=1;

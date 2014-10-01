@@ -2,6 +2,7 @@
 #define _TAPIOS_ETHERNET_H_
 
 #include <util/util.h>
+#include <network/netdev.h>
 
 #define IPV4 0x0800
 #define ARP 0x0608
@@ -40,7 +41,6 @@ struct arp_packet
 	struct arp_header arp_header;
 } __attribute__ ((packed));
 
-void *ethernet_handle_frame(uint8_t *data, size_t len, size_t *reply_len);
-struct arp_packet *arp_handle_frame(uint8_t *data, size_t len, size_t *outlen);
+void ethernet_handle_frame(struct network_device *dev, uint8_t *data, size_t len, size_t *reply_len);
 
 #endif

@@ -434,7 +434,7 @@ static int32_t ext2_read(struct file *f, void *to, uint32_t count)
 	return read_blocks(f->inode->superblock, f, to, inode->blocks, count);
 }
 
-static int32_t ext2_write(struct file *f, void *data, uint32_t count)
+static ssize_t ext2_write(struct file *f, const void *data, size_t count)
 {
 	ext2_superblock *sb=f->inode->superblock;
 	if(count > BLOCKSIZE(sb)) {kprintf("NYI");PANIC();}
@@ -450,7 +450,7 @@ static int32_t ext2_write(struct file *f, void *data, uint32_t count)
 		desc->unallocated_blocks--;
 		ext2_inode *inode=read_inode(sb, f->inode->inode_no);
 		uint8_t *block=get_block(sb, block_index);
-		uint8_t *from=data;
+		const uint8_t *from=data;
 		int32_t written=0;
 		if(count > BLOCKSIZE(sb)) PANIC();
 		for(uint32_t i=0; i<count; ++i, ++written)

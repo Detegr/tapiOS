@@ -1,7 +1,8 @@
-#ifndef TAPIOS_NETDEV_H_
-#define TAPIOS_NETDEV_H_
+#ifndef _TAPIOS_NETDEV_H_
+#define _TAPIOS_NETDEV_H_
 
 #include <util/util.h>
+#include <fs/vfs.h>
 
 struct network_device
 {
@@ -22,7 +23,7 @@ struct network_device
 
 struct network_actions
 {
-	int32_t (*tx)(struct network_device *dev, const void *data, size_t len);
+	ssize_t (*tx)(struct file *file, const void *data, uint32_t count);
 };
 
 struct network_device *network_devices;

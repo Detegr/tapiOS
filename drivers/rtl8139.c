@@ -28,14 +28,15 @@
 #define ROK 1
 #define TOK 4
 
-static int32_t rtl8139_tcp_tx(struct network_device *rtl, const void *data, size_t len)
+static ssize_t rtl8139_tx(struct file *f, const void *data, uint32_t len)
 {
-	return 0;
-}
-
-static void rtl8139_tx(struct network_device *rtl, const void *data, size_t len)
-{
-	if(data==NULL) return;
+	struct network_device *rtl=f->inode->device;
+	if(!rtl)
+	{
+		kprintf("Could not find network device from inode!\n");
+		PANIC();
+	}
+	if(data==NULL) return -1;
 	memcpy(rtl->tx_buf[rtl->tx_pos], data, len);
 	if(len<60)
 	{// Pad with zeros until the length is long enough
@@ -48,6 +49,8 @@ static void rtl8139_tx(struct network_device *rtl, const void *data, size_t len)
 	outdw(rtl->io_base+TXSTAT + (4*rtl->tx_pos), len & 0xFFF);
 	rtl->tx_pos = (rtl->tx_pos + 1) % 4;
 	rtl->tx_buffers_free--;
+
+	return len;
 }
 
 static void rtl8139_isr(void *rtl_dev, struct registers *regs)
@@ -68,12 +71,7 @@ static void rtl8139_isr(void *rtl_dev, struct registers *regs)
 			// Handle the packet and send reply if needed
 			size_t reply_len;
 			uint8_t *data=rtl->rx_buf + rtl->rx_pos + 4;
-			void *reply=ethernet_handle_frame(data, rx_len, &reply_len);
-			if(reply)
-			{
-				rtl8139_tx(rtl, reply, reply_len);
-				kfree(reply);
-			}
+			ethernet_handle_frame(rtl, data, rx_len, &reply_len);
 
 			// Update CAPR. This is some higher level magic found from the manual
 			// +4 is the header, +3 is dword alignment
@@ -91,7 +89,7 @@ static void rtl8139_isr(void *rtl_dev, struct registers *regs)
 static void populate_netdev(struct pci_device *pdev, struct network_device *dev)
 {
 	dev->n_act=kmalloc(sizeof(struct network_actions));
-	dev->n_act->tx=&rtl8139_tcp_tx;
+	dev->n_act->tx=&rtl8139_tx;
 
 	dev->io_base=pci_config_read_dword(pdev->bus_id, pdev->bus_device_id, 0, PCI_BAR0) & 0xFFFFFFFC;
 	dev->irq=pci_config_read_word(pdev->bus_id, pdev->bus_device_id, 0, PCI_INTERRUPT_LINE);
@@ -117,13 +115,12 @@ void register_rtl8139_driver(void)
 	{
 		struct network_device *rtl=kmalloc(sizeof(struct network_device));
 		populate_netdev(rtl_pdev, rtl);
-		rtl_pdev->device=rtl;
 		memset(rtl->rx_buf, 0, RXBUF_LEN+MTU+16);
 		kprintf("RTL8139 IRQ: %d\n", rtl->irq);
 
 		// Enable PCI Bus mastering by setting bit 2 in pci command register
-		uint16_t cmd=pci_config_read_word(rtl_pdev->bus_id, rtl_pdev->device_id, 0, PCI_CMD);
-		pci_config_write_word(rtl_pdev->bus_id, rtl_pdev->device_id, 0, PCI_CMD, cmd|0x4);
+		uint16_t cmd=pci_config_read_word(rtl_pdev->bus_id, rtl_pdev->bus_device_id, 0, PCI_CMD);
+		pci_config_write_word(rtl_pdev->bus_id, rtl_pdev->bus_device_id, 0, PCI_CMD, cmd|0x4);
 
 		// Power-on device by sending 0x0 to config register
 		outb(rtl->io_base+CFG, 0x0);

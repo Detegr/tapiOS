@@ -1,5 +1,5 @@
-#ifndef TAPIOS_DRIVERS_PCI
-#define TAPIOS_DRIVERS_PCI
+#ifndef _TAPIOS_DRIVERS_PCI_
+#define _TAPIOS_DRIVERS_PCI_
 
 #include <util/util.h>
 
@@ -45,7 +45,6 @@ struct pci_device
 	uint16_t vendor_id;
 	uint8_t bus_id;
 	uint8_t bus_device_id;
-	void *device;
 	struct pci_device *next;
 } __attribute__((packed));
 

@@ -118,7 +118,7 @@ struct file *vfs_open(struct inode *node, int *status, int flags)
 	return ret;
 }
 
-int32_t vfs_read(struct file *file, void *to, uint32_t count)
+ssize_t vfs_read(struct file *file, void *to, size_t count)
 {
 	if(file->inode->f_act->read)
 	{
@@ -127,7 +127,7 @@ int32_t vfs_read(struct file *file, void *to, uint32_t count)
 	return -EBADF;
 }
 
-int32_t vfs_write(struct file *file, void *data, uint32_t count)
+ssize_t vfs_write(struct file *file, const void *data, size_t count)
 {
 	if(file->inode->f_act->write)
 	{
