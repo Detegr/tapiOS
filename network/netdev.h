@@ -23,12 +23,14 @@ struct network_device
 
 struct network_actions
 {
-	ssize_t (*tx)(struct file *file, const void *data, uint32_t count);
+	ssize_t (*tx)(struct file *file, const void *data, size_t count);
 };
 
 struct network_device *network_devices;
+struct inode *alloc_netdev_inode(void);
 void setup_network(void);
 void register_network_device(struct network_device *dev);
 void dump_mac_addr(struct network_device *dev);
+ssize_t tx_tcp(struct file *file, const void *data, size_t count);
 
 #endif

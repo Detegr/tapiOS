@@ -23,7 +23,7 @@ static int inbuf_size=0;
 static char outbuf[TTY_BUFFER_SIZE];
 static int outbuf_size=0;
 
-static char *handle_escape(char *str)
+static const char *handle_escape(const char *str)
 {
 	unsigned int row, col;
 	char *outstr;
@@ -108,14 +108,14 @@ static char *handle_escape(char *str)
 	return str;
 }
 
-int32_t tty_write(struct file *f, void *data, uint32_t count)
+ssize_t tty_write(struct file *f, const void *data, size_t count)
 {
 	int i=0;
-	for(char *p=data; i<count; ++i)
+	for(const char *p=data; i<count; ++i)
 	{
 		if(*p == '\033')
 		{
-			char *pp=handle_escape(p);
+			const char *pp=handle_escape(p);
 			if(pp!=p)
 			{
 				int move=pp-p-1;

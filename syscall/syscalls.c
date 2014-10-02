@@ -16,6 +16,10 @@
 #include <drivers/rtl8139.h>
 #include <dev/pci.h>
 #include <network/netdev.h>
+#include <sys/socket.h>
+#include <network/tcp.h>
+#include <network/arp.h>
+#include <util/list.h>
 
 extern void _return_from_exec(void);
 extern void _return_to_userspace(void);
@@ -38,13 +42,15 @@ int _ioctl(int fd, int req, void *argp);
 int _poll(struct pollfd *fds, nfds_t nfds, int timeout);
 int _mkdir(const char* path, mode_t mode);
 int _socket(int domain, int type, int protocol);
+int _connect(int sock, const struct sockaddr *addr, int addr_len);
 
 typedef int(*syscall_ptr)();
 syscall_ptr syscalls[]={
 	&_exit, &_write, &_read, (syscall_ptr)&_sbrk,
 	&_open, &_dup2, &_readdir,
 	&fork, &_waitpid, &_exec, &_fcntl, &getpid, &_fstat,
-	&_getcwd, &_chdir, &_close, &_ioctl, &_poll, &_mkdir, &_socket
+	&_getcwd, &_chdir, &_close, &_ioctl, &_poll, &_mkdir, &_socket,
+	&_connect
 };
 
 int _exit(int code)
@@ -426,16 +432,44 @@ int _mkdir(const char *path, mode_t mode)
 int _socket(int domain, int type, int protocol)
 {
 	if(!network_devices) return -EINVAL;
-	struct inode *inode=vfs_new_inode(NULL, NULL, 0);
-	inode->f_act=kmalloc(sizeof(struct file_actions));
-	inode->f_act->write=network_devices->n_act->tx;
-	inode->device=network_devices;
 	int status;
+	struct inode *inode=alloc_netdev_inode();
 	struct file *f=kmalloc(sizeof(struct file)); // Will be freed on close
 	f->refcount=1;
 	f->inode=inode;
 	f->pos=0;
 	return newfd(f);
+}
+
+int _connect(int sock, const struct sockaddr *addr, int addr_len)
+{
+	struct file *f=current_process->fds[sock];
+	if(!f || !f->inode) return -EBADF;
+	struct network_device *dev=f->inode->device;
+	if(!dev) return -EBADF;
+	bool mac_found=false;
+	uint8_t mac[6];
+	uint32_t dest_ip=((struct sockaddr_in*)addr)->sin_addr;
+	if(arp_cache)
+	{
+		list_foreach(arp_cache, struct ip_mac_pair, entry)
+		{
+			if(entry->ip == dest_ip)
+			{
+				memcpy(mac, entry->mac, 6);
+				mac_found=true;
+				break;
+			}
+		}
+	}
+	if(!mac_found)
+	{
+		const struct arp_packet p=arp_request(dev, dest_ip);
+		dev->n_act->tx(f, &p, sizeof(struct arp_packet));
+	}
+	//struct tcp_packet p;
+	//dev->n_act->tx(f, NULL, 0);
+	return 0;
 }
 
 void syscall(void *v)

@@ -4,7 +4,6 @@
 #include <sys/times.h>
 #include <sys/time.h>
 #include <sys/poll.h>
-#include <sys/socket.h>
 #include <errno.h>
 #include <stdio.h>
 #include <signal.h>
@@ -14,6 +13,7 @@
 #include "sys/dirent.h"
 #include "sys/termios.h"
 #include "sys/ioctl.h"
+#include "sys/socket.h"
 
 #define EXIT 1
 #define WRITE 2
@@ -35,6 +35,7 @@
 #define POLL 18
 #define MKDIR 19
 #define SOCKET 20
+#define CONNECT 21
 
 #define SYSCALL0(n) \
 	int ret; \
@@ -426,4 +427,9 @@ int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)
 int socket(int domain, int type, int protocol)
 {
 	SYSCALL3(SOCKET, domain, type, protocol);
+}
+
+int connect(int socket, const struct sockaddr *address, int address_len)
+{
+	SYSCALL3(CONNECT, socket, address, address_len);
 }
