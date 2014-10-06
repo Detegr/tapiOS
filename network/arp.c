@@ -14,7 +14,7 @@ static void dump_arp_header(struct arp_header *arp)
 	kprintf("Target IP: %x\n", arp->target_ip);
 }
 
-void arp_handle_frame(struct network_device *dev, uint8_t *data, size_t len, size_t *outlen)
+void arp_handle_frame(struct network_device *dev, uint8_t *data, size_t len)
 {
 	struct arp_packet p;
 	uint32_t tmp_ip;
@@ -29,7 +29,7 @@ void arp_handle_frame(struct network_device *dev, uint8_t *data, size_t len, siz
 		p.arp_header.source_ip=p.arp_header.target_ip;
 		p.arp_header.target_ip=tmp_ip;
 		p.arp_header.opcode=htons(ARP_REPLY);
-		*outlen=sizeof(struct arp_packet);
+		;
 
 		memcpy(p.eth_header.mac_src, p.arp_header.source_mac, 6);
 		memcpy(p.eth_header.mac_dst, p.arp_header.target_mac, 6);
@@ -40,7 +40,7 @@ void arp_handle_frame(struct network_device *dev, uint8_t *data, size_t len, siz
 		struct file f={
 			.inode=&i
 		};
-		dev->n_act->tx(&f, &p, *outlen);
+		dev->n_act->tx(&f, &p, sizeof(struct arp_packet));
 	}
 	else if(p.arp_header.opcode == htons(ARP_REPLY) && p.arp_header.target_ip == htonl(MY_IP))
 	{

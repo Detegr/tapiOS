@@ -23,6 +23,6 @@ struct ethernet_header
 	uint16_t ethertype;
 } __attribute__((packed));
 
-void ethernet_handle_frame(struct network_device *dev, uint8_t *data, size_t len, size_t *reply_len);
+void ethernet_handle_frame(struct network_device *dev, uint8_t *data, size_t len);
 
 #endif

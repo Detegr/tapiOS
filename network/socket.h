@@ -19,6 +19,6 @@ struct socket
 	struct list list;
 };
 
-struct socket *open_sockets;
+volatile struct socket *open_sockets;
 
 #endif

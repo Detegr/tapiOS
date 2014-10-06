@@ -34,7 +34,7 @@ struct ip_mac_pair
 
 volatile struct ip_mac_pair *arp_cache;
 
-void arp_handle_frame(struct network_device *dev, uint8_t *data, size_t len, size_t *outlen);
+void arp_handle_frame(struct network_device *dev, uint8_t *data, size_t len);
 struct arp_packet arp_request(struct network_device *dev, uint32_t target_ip);
 
 #endif

@@ -69,9 +69,8 @@ static void rtl8139_isr(void *rtl_dev, struct registers *regs)
 			kprintf("packet length: %d\n", rx_len);
 
 			// Handle the packet and send reply if needed
-			size_t reply_len;
 			uint8_t *data=rtl->rx_buf + rtl->rx_pos + 4;
-			ethernet_handle_frame(rtl, data, rx_len, &reply_len);
+			ethernet_handle_frame(rtl, data, rx_len);
 
 			// Update CAPR. This is some higher level magic found from the manual
 			// +4 is the header, +3 is dword alignment

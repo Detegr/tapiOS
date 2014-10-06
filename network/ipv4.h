@@ -2,6 +2,7 @@
 #define _TAPIOS_IPV4_H_
 
 #include <util/util.h>
+#include "netdev.h"
 
 struct ipv4_header
 {
@@ -27,5 +28,6 @@ struct ipv4_header
 } __attribute__((packed));
 
 uint16_t ipv4_checksum(struct ipv4_header *h);
+void ipv4_handle_frame(struct network_device *dev, uint8_t *data, size_t len);
 
 #endif

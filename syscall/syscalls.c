@@ -474,6 +474,22 @@ int _connect(int sock, const struct sockaddr *addr, int addr_len)
 	struct tcp_packet p;
 	build_tcp_packet(dev, mac, addrin, &p, NULL);
 	dev->n_act->tx(f, &p, sizeof(struct tcp_packet));
+	bool exists=false;
+	list_foreach(open_sockets, volatile struct socket, sock)
+	{
+		if(sock->port == addrin->sin_port)
+		{
+			exists=true;
+			break;
+		}
+	}
+	if(!exists)
+	{
+		struct socket* os=(struct socket*)open_sockets;
+		struct socket* s=(struct socket*)f;
+		s->state=CONNECTING;
+		list_add(os, s);
+	}
 	return 0;
 }
 

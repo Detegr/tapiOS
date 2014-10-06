@@ -13,3 +13,8 @@ uint16_t ipv4_checksum(struct ipv4_header *h)
 	uint16_t *u16ptr=(uint16_t*)&tmp;
 	return ~(u16ptr[0] + u16ptr[1]);
 }
+
+void ipv4_handle_frame(struct network_device *dev, uint8_t *data, size_t len)
+{
+	kprintf("\n\nIPV4 HANDLE FRAME\n\n");
+}
