@@ -52,15 +52,16 @@ void arp_handle_frame(struct network_device *dev, uint8_t *data, size_t len, siz
 		}
 		else
 		{
-			list_foreach(arp_cache, struct ip_mac_pair, entry)
+			list_foreach(arp_cache, volatile struct ip_mac_pair, entry)
 			{
 				if(entry->ip == p.arp_header.source_ip) return;
 			}
 		}
 		if(!e)
 		{
+			struct ip_mac_pair *arpc=(struct ip_mac_pair*)arp_cache;
 			e=kmalloc(sizeof(struct ip_mac_pair));
-			list_add(arp_cache, e);
+			list_add(arpc, e);
 		}
 		e->ip=p.arp_header.source_ip;
 		memcpy(e->mac, p.arp_header.source_mac, 6);

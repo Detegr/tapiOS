@@ -146,7 +146,12 @@ int32_t vfs_close(struct file *f)
 		if(!f->inode->parent)
 		{
 			kprintf("Freeing orphan inode (socket)\n");
+			if(f->inode->f_act->close)
+			{
+				f->inode->f_act->close(f);
+			}
 			kfree(f->inode);
+			f->inode=NULL;
 			return 0;
 		}
 		struct inode *i=f->inode->parent->children;
@@ -155,6 +160,10 @@ int32_t vfs_close(struct file *f)
 			if(i->siblings==f->inode)
 			{
 				i->siblings=f->inode->siblings;
+				if(f->inode->f_act->close)
+				{
+					f->inode->f_act->close(f);
+				}
 				kfree(f->inode);
 				f->inode=NULL;
 				break;

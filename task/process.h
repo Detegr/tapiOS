@@ -55,8 +55,6 @@ struct process
 	bool active;
 
 	uint8_t keyp;
-	char keybuf[256];
-	char stdoutbuf[256]; // Just a hack before any better implementation
 
 	//struct open_files *files_open;
 	struct file *fds[FD_MAX];

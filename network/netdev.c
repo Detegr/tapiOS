@@ -1,6 +1,7 @@
 #include "netdev.h"
 #include "arp.h"
 #include "tcp.h"
+#include "socket.h"
 #include <terminal/vga.h>
 #include <mem/kmalloc.h>
 
@@ -8,6 +9,7 @@ void setup_network(void)
 {
 	arp_cache=NULL;
 	network_devices=NULL;
+	open_sockets=NULL;
 	print_startup_info("Network", 1);
 }
 
@@ -47,6 +49,7 @@ struct inode *alloc_netdev_inode(void)
 {
 	struct inode *inode=vfs_new_inode(NULL, NULL, 0);
 	inode->f_act=kmalloc(sizeof(struct file_actions));
+	memset(inode->f_act, 0, sizeof(struct file_actions));
 	inode->f_act->write=&tx_tcp;
 	inode->device=network_devices;
 	return inode;

@@ -4,6 +4,7 @@
 #include <util/util.h>
 #include <network/netdev.h>
 
+// Ethertypes
 #define IPV4 0x0800
 #define ARP 0x0806
 

@@ -31,7 +31,8 @@ struct ip_mac_pair
 
 	struct list list;
 };
-struct ip_mac_pair *arp_cache;
+
+volatile struct ip_mac_pair *arp_cache;
 
 void arp_handle_frame(struct network_device *dev, uint8_t *data, size_t len, size_t *outlen);
 struct arp_packet arp_request(struct network_device *dev, uint32_t target_ip);

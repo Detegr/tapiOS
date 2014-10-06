@@ -1,38 +1,65 @@
-OBJECTS=boot/loader.o boot/paging_asm.o util/util_asm.o terminal/vga.o irq/gdt.o irq/idt.o irq/pic.o irq/irq_asm.o irq/irq.o util/util.o mem/kmalloc.o mem/pmm.o mem/vmm.o kmain.o util/scancodes.o task/process.o task/multitasking.o irq/timer.o syscall/syscalls.o fs/vfs.o fs/ext2.o task/processtree.o task/scheduler.o fs/devfs.o drivers/tty.o drivers/keyboard.o dev/pci.o drivers/rtl8139.o network/ethernet.o network/netdev.o network/ipv4.o network/tcp.o network/arp.o util/list.o
-CFLAGS=-Wall -Wextra -Werror -nostdlib -Wno-unused-parameter -m32 -ffreestanding -g3 -std=c11 -Wno-unused-variable -masm=intel -Wno-unused-function -Wno-unused-but-set-parameter -I. -Wno-address -Wno-sign-compare -Icross/i586-pc-tapios/include
+ASM_SOURCES=boot/loader.s     \
+			boot/paging_asm.s \
+ 			util/util_asm.s   \
+			irq/irq_asm.s
+SOURCES= terminal/vga.c      \
+		irq/gdt.c           \
+		irq/idt.c           \
+		irq/pic.c           \
+		irq/irq.c           \
+		util/util.c         \
+		mem/kmalloc.c       \
+		mem/pmm.c           \
+		mem/vmm.c           \
+		kmain.c             \
+		util/scancodes.c    \
+		task/process.c      \
+		task/multitasking.c \
+		irq/timer.c         \
+		syscall/syscalls.c  \
+		fs/vfs.c            \
+		fs/ext2.c           \
+		task/processtree.c  \
+		task/scheduler.c    \
+		fs/devfs.c          \
+		drivers/tty.c       \
+		drivers/keyboard.c  \
+		dev/pci.c           \
+		drivers/rtl8139.c   \
+		network/ethernet.c  \
+		network/netdev.c    \
+		network/ipv4.c      \
+		network/tcp.c       \
+		network/arp.c       \
+		network/socket.c    \
+		util/list.c
+ASM_OBJECTS=$(ASM_SOURCES:.s=.o)
+OBJECTS=$(SOURCES:.c=.o)
+DEPS=$(SOURCES:.c=.d)
+
+CFLAGS=-MD -MP -Wall -Wextra -Werror -nostdlib -Wno-unused-parameter -m32 -ffreestanding -g3 -std=c11 -Wno-unused-variable -masm=intel -Wno-unused-function -Wno-unused-but-set-parameter -I. -Wno-address -Wno-sign-compare -Icross/i586-pc-tapios/include
 ASM_FLAGS=-f elf -g
 LFLAGS=-melf_i386 -Lcross/i586-pc-tapios/lib
 
-all: kernel
+.PHONY: all clean iso
 
+all: kernel
 iso:
 	grub-mkrescue -d/usr/lib/grub/i386-pc -o tapios.iso tapios
-
-kernel: $(OBJECTS)
-	ld -T boot/link.ld $(OBJECTS) -o tapios/boot/kernel.bin $(LFLAGS)
+kernel: $(ASM_OBJECTS) $(OBJECTS)
+	ld -T boot/link.ld $^ -o tapios/boot/kernel.bin $(LFLAGS)
 	grub-mkrescue -d/usr/lib/grub/i386-pc -o tapios.iso tapios
-
 userspace:
 	make -C usr
 	make iso
-
-%.o : %.c %.h
-	$(CC) $(CFLAGS) -c $< -o $@ -g3
-
+%.o : %.c
+	$(CC) $(CFLAGS) -c $< -o $@
 %.o : %.s
 	nasm $(ASM_FLAGS) $< -o $@
-
 clean:
-	-rm irq/*.o
-	-rm mem/*.o
-	-rm task/*.o
-	-rm boot/*.o
-	-rm fs/*.o
-	-rm terminal/*.o
-	-rm syscall/*.o
-	-rm util/*.o
-	-rm network/*.o
-	-rm drivers/*.o
-	-rm *.o tapios/boot/*.bin
+	-rm $(ASM_OBJECTS)
+	-rm $(OBJECTS)
+	-rm $(DEPS)
+	-rm tapios/boot/*.bin
 
-.PHONY: all clean
+-include $(DEPS)

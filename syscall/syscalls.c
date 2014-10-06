@@ -19,6 +19,7 @@
 #include <sys/socket.h>
 #include <network/tcp.h>
 #include <network/arp.h>
+#include <network/socket.h>
 #include <util/list.h>
 
 extern void _return_from_exec(void);
@@ -434,41 +435,45 @@ int _socket(int domain, int type, int protocol)
 	if(!network_devices) return -EINVAL;
 	int status;
 	struct inode *inode=alloc_netdev_inode();
-	struct file *f=kmalloc(sizeof(struct file)); // Will be freed on close
+	struct socket *f=kmalloc(sizeof(struct socket)); // Will be freed on close
 	f->refcount=1;
 	f->inode=inode;
-	f->pos=0;
-	return newfd(f);
+	return newfd((struct file*)f);
+}
+
+static bool find_mac(uint32_t dest_ip, uint8_t *to)
+{// Assuming that 'to' has at least 6 bytes of space
+	list_foreach(arp_cache, volatile struct ip_mac_pair, entry)
+	{
+		if(entry->ip == dest_ip)
+		{
+			memcpy(to, (const void*)entry->mac, 6);
+			return true;
+		}
+	}
+	return false;
 }
 
 int _connect(int sock, const struct sockaddr *addr, int addr_len)
 {
+	struct sockaddr_in *addrin=(struct sockaddr_in*)addr;
 	struct file *f=current_process->fds[sock];
 	if(!f || !f->inode) return -EBADF;
 	struct network_device *dev=f->inode->device;
-	if(!dev) return -EBADF;
+	if(!dev) return -ENOTSOCK;
 	bool mac_found=false;
 	uint8_t mac[6];
-	uint32_t dest_ip=((struct sockaddr_in*)addr)->sin_addr;
-	if(arp_cache)
-	{
-		list_foreach(arp_cache, struct ip_mac_pair, entry)
-		{
-			if(entry->ip == dest_ip)
-			{
-				memcpy(mac, entry->mac, 6);
-				mac_found=true;
-				break;
-			}
-		}
-	}
+	uint32_t dest_ip=addrin->sin_addr;
+	mac_found=find_mac(dest_ip, mac);
 	if(!mac_found)
 	{
 		const struct arp_packet p=arp_request(dev, dest_ip);
 		dev->n_act->tx(f, &p, sizeof(struct arp_packet));
+		while(!find_mac(dest_ip, mac)) __asm__ volatile("sti;hlt;"); // TODO
 	}
-	//struct tcp_packet p;
-	//dev->n_act->tx(f, NULL, 0);
+	struct tcp_packet p;
+	build_tcp_packet(dev, mac, addrin, &p, NULL);
+	dev->n_act->tx(f, &p, sizeof(struct tcp_packet));
 	return 0;
 }
 

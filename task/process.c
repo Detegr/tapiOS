@@ -116,9 +116,6 @@ int fork(void)
 	child->user_stack=parent->user_stack;
 	strncpy(child->cwd, parent->cwd, PATH_MAX);
 
-	memset(child->stdoutbuf, 0, 256);
-	memset(child->keybuf, 0, 256);
-
 	copy_open_resources(parent, child);
 
 	struct process* p=(struct process*)process_list;
