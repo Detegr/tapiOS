@@ -28,7 +28,7 @@
 #define ROK 1
 #define TOK 4
 
-static ssize_t rtl8139_tx(struct file *f, const void *data, uint32_t len)
+static ssize_t rtl8139_tx(struct file *f, const void *data, size_t len)
 {
 	struct network_device *rtl=f->inode->device;
 	if(!rtl)

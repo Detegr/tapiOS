@@ -131,7 +131,7 @@ ssize_t tty_write(struct file *f, const void *data, size_t count)
 	return count;
 }
 
-int32_t tty_read(struct file *f, void *top, uint32_t count)
+ssize_t tty_read(struct file *f, void *top, size_t count)
 {
 	char *to=top;
 	int i;

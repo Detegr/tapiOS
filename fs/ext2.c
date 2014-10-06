@@ -379,7 +379,7 @@ static int read_indirect_block(ext2_superblock *sb, struct file *f, uint32_t *bl
 	return ret;
 }
 
-static int read_blocks(ext2_superblock *sb, struct file *f, uint8_t *to, uint32_t *blocks, uint32_t count)
+static ssize_t read_blocks(ext2_superblock *sb, struct file *f, uint8_t *to, uint32_t *blocks, uint32_t count)
 {
 	int blocksize=BLOCKSIZE(sb);
 	int ret=0;
@@ -424,7 +424,7 @@ static int read_blocks(ext2_superblock *sb, struct file *f, uint8_t *to, uint32_
 	return ret;
 }
 
-static int32_t ext2_read(struct file *f, void *to, uint32_t count)
+static ssize_t ext2_read(struct file *f, void *to, size_t count)
 {
 	ext2_inode *inode=read_inode(f->inode->superblock, f->inode->inode_no);
 	if(ISDIR(inode))

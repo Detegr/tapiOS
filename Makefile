@@ -37,7 +37,8 @@ ASM_OBJECTS=$(ASM_SOURCES:.s=.o)
 OBJECTS=$(SOURCES:.c=.o)
 DEPS=$(SOURCES:.c=.d)
 
-CFLAGS=-MD -MP -Wall -Wextra -Werror -nostdlib -Wno-unused-parameter -m32 -ffreestanding -g3 -std=c11 -Wno-unused-variable -masm=intel -Wno-unused-function -Wno-unused-but-set-parameter -I. -Wno-address -Wno-sign-compare -Icross/i586-pc-tapios/include
+CC=i586-pc-tapios-gcc
+CFLAGS=-MD -MP -Wall -Wextra -Werror -nostdlib -Wno-unused-parameter -ffreestanding -g3 -std=c11 -Wno-unused-variable -masm=intel -Wno-unused-function -Wno-unused-but-set-parameter -I. -Wno-address -Wno-sign-compare -Icross/i586-pc-tapios/include -isystemcross/i586-pc-tapios/include
 ASM_FLAGS=-f elf -g
 LFLAGS=-melf_i386 -Lcross/i586-pc-tapios/lib
 

@@ -30,7 +30,7 @@ bool kbd_hasdata(void)
 	return kbd_buf_size > 0;
 }
 
-int32_t kbd_read(struct file *f, void *top, uint32_t count)
+ssize_t kbd_read(struct file *f, void *top, size_t count)
 {
 	uint8_t *to=top;
 	if(count == 0) return 0;
