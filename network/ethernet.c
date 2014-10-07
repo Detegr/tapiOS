@@ -12,7 +12,7 @@ void ethernet_handle_frame(struct network_device *dev, uint8_t *data, size_t len
 	{
 		case IPV4:
 			ipv4_handle_frame(dev, data + sizeof(struct ethernet_header), len);
-			break;
+			return;
 		case ARP:
 			arp_handle_frame(dev, data + sizeof(struct ethernet_header), len);
 			return;

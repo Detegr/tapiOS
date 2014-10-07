@@ -63,10 +63,10 @@ static void rtl8139_isr(void *rtl_dev, struct registers *regs)
 	{
 		while((inw(rtl->io_base+CMD) & RXBUF_EMPTY) == 0)
 		{
-			kprintf("rtl status: %d, pos %d\n", status, rtl->rx_pos);
-			kprintf("status from packet: %d\n", *(uint16_t*)(rtl->rx_buf + rtl->rx_pos));
+			//kprintf("rtl status: %d, pos %d\n", status, rtl->rx_pos);
+			//kprintf("status from packet: %d\n", *(uint16_t*)(rtl->rx_buf + rtl->rx_pos));
 			uint16_t rx_len=*(uint16_t*)(rtl->rx_buf + rtl->rx_pos + 2);
-			kprintf("packet length: %d\n", rx_len);
+			//kprintf("packet length: %d\n", rx_len);
 
 			// Handle the packet and send reply if needed
 			uint8_t *data=rtl->rx_buf + rtl->rx_pos + 4;

@@ -36,5 +36,6 @@ volatile struct ip_mac_pair *arp_cache;
 
 void arp_handle_frame(struct network_device *dev, uint8_t *data, size_t len);
 struct arp_packet arp_request(struct network_device *dev, uint32_t target_ip);
+bool arp_find_mac(uint32_t dest_ip, uint8_t *to);
 
 #endif

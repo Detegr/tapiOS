@@ -39,11 +39,10 @@ struct tcp_packet
 	struct ethernet_header eth_header;
 	struct ipv4_header ipv4_header;
 	struct tcp_header tcp_header;
-	const void *data;
 } __attribute__((packed));
 
-
 uint16_t tcp_checksum(struct tcp_packet *p);
-void build_tcp_packet(struct network_device *dev, uint8_t *dest_mac, struct sockaddr_in *dest_addrin, struct tcp_packet *p, void *data);
+void tcp_build_packet(struct network_device *dev, const uint8_t *dest_mac, const struct sockaddr_in *dest_addrin, struct tcp_packet *p, const void *data);
+void tcp_handle_frame(struct network_device *dev, struct ipv4_header *ipv4h, struct tcp_header *tcph, size_t len);
 
 #endif

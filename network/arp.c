@@ -19,7 +19,7 @@ void arp_handle_frame(struct network_device *dev, uint8_t *data, size_t len)
 	struct arp_packet p;
 	uint32_t tmp_ip;
 	memcpy(&p.arp_header, data, sizeof(struct arp_header));
-	dump_arp_header(&p.arp_header);
+	//dump_arp_header(&p.arp_header);
 	if(p.arp_header.opcode == htons(ARP_REQUEST) && p.arp_header.target_ip == htonl(MY_IP))
 	{
 		p.eth_header.ethertype=htons(ARP);
@@ -29,7 +29,6 @@ void arp_handle_frame(struct network_device *dev, uint8_t *data, size_t len)
 		p.arp_header.source_ip=p.arp_header.target_ip;
 		p.arp_header.target_ip=tmp_ip;
 		p.arp_header.opcode=htons(ARP_REPLY);
-		;
 
 		memcpy(p.eth_header.mac_src, p.arp_header.source_mac, 6);
 		memcpy(p.eth_header.mac_dst, p.arp_header.target_mac, 6);
@@ -83,4 +82,17 @@ struct arp_packet arp_request(struct network_device *dev, uint32_t target_ip)
 	ret.arp_header.target_ip=target_ip;
 	ret.arp_header.source_ip=htonl(MY_IP); // TODO
 	return ret;
+}
+
+bool arp_find_mac(uint32_t dest_ip, uint8_t *to)
+{// Assuming that 'to' has at least 6 bytes of space
+	list_foreach(arp_cache, volatile struct ip_mac_pair, entry)
+	{
+		if(entry->ip == dest_ip)
+		{
+			memcpy(to, (const void*)entry->mac, 6);
+			return true;
+		}
+	}
+	return false;
 }

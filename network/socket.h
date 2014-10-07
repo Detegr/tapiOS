@@ -3,6 +3,7 @@
 
 #include <util/list.h>
 #include <util/util.h>
+#include <sys/socket.h>
 
 #define CONNECTING 1
 #define CONNECTED 2
@@ -13,7 +14,10 @@ struct socket
 	uint32_t refcount;
 	struct inode *inode;
 	// End of note
-	uint16_t port;
+	struct sockaddr_in saddr;
+	uint16_t src_port;
+	uint32_t seq_no;
+	uint32_t ack_no;
 	uint8_t state;
 
 	struct list list;

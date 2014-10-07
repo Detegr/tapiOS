@@ -1,4 +1,5 @@
 #include "ipv4.h"
+#include "tcp.h"
 #include <sys/socket.h>
 #include <terminal/vga.h>
 
@@ -16,5 +17,9 @@ uint16_t ipv4_checksum(struct ipv4_header *h)
 
 void ipv4_handle_frame(struct network_device *dev, uint8_t *data, size_t len)
 {
-	kprintf("\n\nIPV4 HANDLE FRAME\n\n");
+	struct ipv4_header *h=(struct ipv4_header*)data;
+	if(h->protocol==TCP_PROTOCOL_NUMBER)
+	{
+		tcp_handle_frame(dev, h, (struct tcp_header*)(data + sizeof(struct ipv4_header)), len);
+	}
 }

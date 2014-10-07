@@ -441,19 +441,6 @@ int _socket(int domain, int type, int protocol)
 	return newfd((struct file*)f);
 }
 
-static bool find_mac(uint32_t dest_ip, uint8_t *to)
-{// Assuming that 'to' has at least 6 bytes of space
-	list_foreach(arp_cache, volatile struct ip_mac_pair, entry)
-	{
-		if(entry->ip == dest_ip)
-		{
-			memcpy(to, (const void*)entry->mac, 6);
-			return true;
-		}
-	}
-	return false;
-}
-
 int _connect(int sock, const struct sockaddr *addr, int addr_len)
 {
 	struct sockaddr_in *addrin=(struct sockaddr_in*)addr;
@@ -464,20 +451,24 @@ int _connect(int sock, const struct sockaddr *addr, int addr_len)
 	bool mac_found=false;
 	uint8_t mac[6];
 	uint32_t dest_ip=addrin->sin_addr;
-	mac_found=find_mac(dest_ip, mac);
+	mac_found=arp_find_mac(dest_ip, mac);
 	if(!mac_found)
 	{
 		const struct arp_packet p=arp_request(dev, dest_ip);
 		dev->n_act->tx(f, &p, sizeof(struct arp_packet));
-		while(!find_mac(dest_ip, mac)) __asm__ volatile("sti;hlt;"); // TODO
+		while(!arp_find_mac(dest_ip, mac)) __asm__ volatile("sti;hlt;"); // TODO
+		__asm__ volatile("cli;");
 	}
 	struct tcp_packet p;
-	build_tcp_packet(dev, mac, addrin, &p, NULL);
-	dev->n_act->tx(f, &p, sizeof(struct tcp_packet));
+	tcp_build_packet(dev, mac, addrin, &p, NULL);
+	p.tcp_header.SYN=1;
+	p.tcp_header.seq_no=0;
+	p.tcp_header.ack_no=0;
+	p.tcp_header.checksum=tcp_checksum(&p);
 	bool exists=false;
 	list_foreach(open_sockets, volatile struct socket, sock)
 	{
-		if(sock->port == addrin->sin_port)
+		if(sock->saddr.sin_port == addrin->sin_port)
 		{
 			exists=true;
 			break;
@@ -487,9 +478,17 @@ int _connect(int sock, const struct sockaddr *addr, int addr_len)
 	{
 		struct socket* os=(struct socket*)open_sockets;
 		struct socket* s=(struct socket*)f;
+		s->saddr=*addrin;
 		s->state=CONNECTING;
-		list_add(os, s);
+		s->seq_no=p.tcp_header.seq_no;
+		s->ack_no=p.tcp_header.ack_no;
+		s->src_port=p.tcp_header.port_src;
+		if(open_sockets){list_add(os, s);}
+		else open_sockets=s;
+		s->list.next=NULL;
+		kprintf("!! ADDED TO LIST %x\n", open_sockets);
 	}
+	dev->n_act->tx(f, &p, sizeof(struct tcp_packet));
 	return 0;
 }
 
