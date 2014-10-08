@@ -213,7 +213,11 @@ pid_t _waitpid(pid_t pid, int *status, int options)
 
 		pid_t ret=pnode->first_child->process->pid;
 		current_process->state=waiting;
-		while(pnode->first_child) __asm__("sti;hlt");
+		while(pnode->first_child)
+		{
+			//kprintf("Waiting...\n");
+			sched_yield();
+		}
 		current_process->state=running;
 		if(status) *status = 0;
 		return ret;
@@ -223,7 +227,7 @@ pid_t _waitpid(pid_t pid, int *status, int options)
 		volatile struct pnode const *pnode=find_process_by_pid(pid);
 		if(!pnode) return -1;
 		current_process->state=waiting;
-		while(pnode) __asm__("sti;hlt");
+		while(pnode) sched_yield();
 		current_process->state=running;
 		if(status) *status = 0;
 		return pid;
@@ -456,7 +460,7 @@ int _connect(int sock, const struct sockaddr *addr, int addr_len)
 	{
 		const struct arp_packet p=arp_request(dev, dest_ip);
 		dev->n_act->tx(f, &p, sizeof(struct arp_packet));
-		while(!arp_find_mac(dest_ip, mac)) __asm__ volatile("sti;hlt;"); // TODO
+		while(!arp_find_mac(dest_ip, mac)) sched_yield();
 		__asm__ volatile("cli;");
 	}
 	struct tcp_packet p;

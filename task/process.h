@@ -77,6 +77,7 @@ int getpid(void);
 int newfd(struct file *f);
 vaddr_t init_elf_get_entry_point(uint8_t* elf);
 vptr_t *setup_usermode_stack(vaddr_t entry_point, int argc, char **const argv, char **const envp, vptr_t *stack_top_ptr);
+vptr_t *setup_kernel_stack(vaddr_t entry_point, vptr_t *stack_top_ptr);
 
 /* Gets dirname from executable path and assigns it to cwd of process p */
 void setcwd_dirname(struct process *p, const char *executable);

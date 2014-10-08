@@ -3,6 +3,7 @@
 #include <util/util.h>
 #include <util/scancodes.h>
 #include <task/process.h>
+#include <task/scheduler.h>
 #include <irq/irq.h>
 
 #include "keyboard.h"
@@ -11,7 +12,7 @@
 
 static struct file_actions kbd_fact;
 static struct inode_actions kbd_iact;
-static uint8_t kbd_buffer[KBD_BUFFER_SIZE]; // TODO: Multiple devices again... How?
+static uint8_t kbd_buffer[KBD_BUFFER_SIZE];
 static uint8_t kbd_buf_size=0;
 
 void kbd_buffer_push(uint8_t c)
@@ -34,7 +35,7 @@ ssize_t kbd_read(struct file *f, void *top, size_t count)
 {
 	uint8_t *to=top;
 	if(count == 0) return 0;
-	while(count > kbd_buf_size) __asm__ volatile("sti;hlt;");
+	while(count > kbd_buf_size) sched_yield();
 	int i=0;
 	for(int i=0; i<count; ++i)
 	{

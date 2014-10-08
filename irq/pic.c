@@ -3,7 +3,6 @@
 #include "irq.h"
 #include <task/process.h>
 #include <task/scheduler.h>
-#include <task/tss.h>
 #include <util/util.h>
 #include <terminal/vga.h>
 
@@ -80,14 +79,6 @@ void timer_handler(void)
 {
 	if(!current_process) return;
 
-	struct process *new_process=get_next_process();
-	struct process *old_process=(struct process*)current_process;
-	if(!new_process || old_process == new_process) return;
-
-	current_process=new_process;
-	physaddr_t pageaddr=get_page((vaddr_t)new_process->pdir) & 0xFFFFF000;
-	tss.esp0=((vaddr_t)current_process->esp0)+KERNEL_STACK_SIZE;
-
 	/* Handle EOI before switching the process */
 	__asm__ volatile(
 		"call pic_get_irq;"
@@ -101,20 +92,8 @@ void timer_handler(void)
 		"jmp .finish;"
 		".send_slave: out 0xA0, al;"
 		".finish:");
-	/* Save 8 general purpose registers, save old kernel stack pointer
-	 * and switch kernel stack pointers. Also change the page directory to
-	 * the switced process' page directory. */
-	__asm__ volatile(
-		"lea edx, 1f;"
-		"push edx;"
-		"pusha;"
-		"lea edx, %0;"
-		"mov [edx], esp;"
-		"mov cr3, %2;"
-		"mov esp, %1;"
-		"popa;"
-		"ret;"
-		"1:" :: "m"(old_process->kesp), "b"(new_process->kesp), "c"(pageaddr));
+
+	switch_task();
 }
 
 inline void setup_pic(void)

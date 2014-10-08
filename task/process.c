@@ -161,6 +161,30 @@ int newfd(struct file *f)
 	return -1;
 }
 
+vptr_t *setup_kernel_stack(vaddr_t entry_point, vptr_t *stack_top_ptr)
+{
+	uint32_t *stack_top=(uint32_t*)stack_top_ptr;
+	PUSH(KERNEL_DATA_SEGMENT);
+	PUSH((uint32_t)(stack_top+1));
+	uint32_t eflags; __asm__ volatile("pushfd; pop %0;" : "=r"(eflags));
+	PUSH(eflags|0x200); // Enable interrupts in EFLAGS
+	PUSH(KERNEL_CODE_SEGMENT);
+	PUSH(entry_point);
+
+	for(int i=0; i<8; ++i)
+	{// Initial register values
+		PUSH(0);
+	}
+	/*
+	for(int i=0; i<4; ++i)
+	{// ds,es,fs,gs to user mode DS
+		PUSH(KERNEL_DATA_SEGMENT);
+	}*/
+
+	return (vptr_t*)stack_top;
+}
+
+
 vptr_t *setup_usermode_stack(vaddr_t entry_point, int argc, char **const argv, char **const envp, vptr_t *stack_top_ptr)
 {
 	uint32_t *stack_top=(uint32_t*)stack_top_ptr;

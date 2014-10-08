@@ -39,6 +39,29 @@ void free_process_stack(vptr_t *stack)
 	}
 }
 
+static void kernel_idle_task(void)
+{
+	while(1)
+	{
+		__asm__ volatile("sti;hlt;");
+	}
+}
+
+static struct process *setup_kernel_idle_task(void)
+{
+	struct process *idle=kmalloc(sizeof(struct process));
+	memset(idle, 0, sizeof(struct process));
+
+	idle->pdir=(page_directory*)initial_pdir;
+	idle->esp0=kmalloc(KERNEL_STACK_SIZE);
+	idle->pid=-1;
+	idle->kesp=setup_kernel_stack((vaddr_t)&kernel_idle_task, idle->esp0+KERNEL_STACK_SIZE);
+	idle->state=running;
+	idle->active=true;
+
+	return idle;
+}
+
 void setup_initial_process(vaddr_t entry_point)
 {
 	vptr_t *stack=setup_process_stack();
@@ -57,9 +80,9 @@ void setup_initial_process(vaddr_t entry_point)
 	memset(current_process->esp0, 0, KERNEL_STACK_SIZE);
 	memset((void*)current_process->fds, 0, FD_MAX*sizeof(struct file*));
 	tss.esp0=(uint32_t)current_process->kesp;
+	current_process->next=setup_kernel_idle_task();
 
 	__asm__ volatile(
 		"mov esp, %0;"
 		"jmp %1;" :: "r"(stack_top),"r"(_return_to_userspace));
 }
-
