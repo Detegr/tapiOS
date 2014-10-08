@@ -43,7 +43,7 @@ static void kernel_idle_task(void)
 {
 	while(1)
 	{
-		__asm__ volatile("sti;hlt;");
+		__asm__ volatile("sti; hlt;");
 	}
 }
 

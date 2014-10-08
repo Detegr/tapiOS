@@ -175,11 +175,6 @@ vptr_t *setup_kernel_stack(vaddr_t entry_point, vptr_t *stack_top_ptr)
 	{// Initial register values
 		PUSH(0);
 	}
-	/*
-	for(int i=0; i<4; ++i)
-	{// ds,es,fs,gs to user mode DS
-		PUSH(KERNEL_DATA_SEGMENT);
-	}*/
 
 	return (vptr_t*)stack_top;
 }

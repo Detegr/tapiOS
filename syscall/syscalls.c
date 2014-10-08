@@ -213,11 +213,7 @@ pid_t _waitpid(pid_t pid, int *status, int options)
 
 		pid_t ret=pnode->first_child->process->pid;
 		current_process->state=waiting;
-		while(pnode->first_child)
-		{
-			//kprintf("Waiting...\n");
-			sched_yield();
-		}
+		while(pnode->first_child) sched_yield();
 		current_process->state=running;
 		if(status) *status = 0;
 		return ret;

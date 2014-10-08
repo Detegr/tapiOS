@@ -13,7 +13,7 @@
 static struct file_actions kbd_fact;
 static struct inode_actions kbd_iact;
 static uint8_t kbd_buffer[KBD_BUFFER_SIZE];
-static uint8_t kbd_buf_size=0;
+static volatile uint8_t kbd_buf_size=0;
 
 void kbd_buffer_push(uint8_t c)
 {
