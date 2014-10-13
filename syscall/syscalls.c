@@ -21,6 +21,7 @@
 #include <network/arp.h>
 #include <network/socket.h>
 #include <util/list.h>
+#include <util/random.h>
 
 extern void _return_from_exec(void);
 extern void _return_to_userspace(void);
@@ -446,8 +447,6 @@ int _socket(int domain, int type, int protocol)
 	return newfd((struct file*)f);
 }
 
-static uint32_t stupid_random_ports_ptr=0;
-static uint16_t stupid_random_ports[]={htons(1000),htons(1001),htons(1002),htons(1003)};
 int _connect(int sock, const struct sockaddr *addr, int addr_len)
 {
 	struct sockaddr_in *addrin=(struct sockaddr_in*)addr;
@@ -471,7 +470,7 @@ int _connect(int sock, const struct sockaddr *addr, int addr_len)
 		.SYN=1
 	};
 	tcp_build_packet(dev, mac, addrin, &p, &opts, NULL, 0);
-	p.tcp_header.port_src=stupid_random_ports[stupid_random_ports_ptr++];
+	p.tcp_header.port_src=rand() % 65535;
 	p.tcp_header.ack_no=0;
 	p.tcp_header.checksum=tcp_checksum(&p, 0);
 	bool exists=false;

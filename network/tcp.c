@@ -4,10 +4,7 @@
 #include <terminal/vga.h>
 #include <util/list.h>
 #include <mem/kmalloc.h>
-
-// Simulate random number generation with this madness :D
-static uint32_t stupid_random_ptr=0;
-static uint32_t stupid_random_array[]={12414,52616,5235253,651903,152912};
+#include <util/random.h>
 
 void tcp_dump_header(struct tcp_header *h)
 {
@@ -64,7 +61,7 @@ void tcp_build_packet(struct network_device *dev, const uint8_t *dest_mac, const
 	p->tcp_header.opts.offset=5; // Minimum
 	p->tcp_header.window_size=htons(1024);
 	p->tcp_header.urgent_ptr=0;
-	p->tcp_header.seq_no=stupid_random_array[stupid_random_ptr++];
+	p->tcp_header.seq_no=(uint32_t)rand();
 
 	memcpy(p->data, data, data_len);
 }
