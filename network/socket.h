@@ -7,6 +7,8 @@
 
 #define CONNECTING 1
 #define CONNECTED 2
+#define DISCONNECTING 3
+#define DISCONNECTED 4
 
 struct socket
 {
@@ -19,6 +21,7 @@ struct socket
 	uint32_t seq_no;
 	uint32_t ack_no;
 	uint8_t state;
+	uint8_t dst_mac[6];
 
 	struct list list;
 };

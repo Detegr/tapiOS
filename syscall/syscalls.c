@@ -435,16 +435,24 @@ int _socket(int domain, int type, int protocol)
 	if(!network_devices) return -EINVAL;
 	int status;
 	struct inode *inode=alloc_netdev_inode();
-	struct socket *f=kmalloc(sizeof(struct socket)); // Will be freed on close
-	f->refcount=1;
+	struct socket *f=kmalloc(sizeof(struct socket));
+
+ 	/* Refcount of the socket will be set to 2. The OS will have one ref and the
+	 * userspace program creating this socket will have the other ref.
+	 * This is because a socket should not be freed from the OS when it is closed
+	 * by the userspace program. */
+	f->refcount=2;
 	f->inode=inode;
 	return newfd((struct file*)f);
 }
 
+static uint32_t stupid_random_ports_ptr=0;
+static uint16_t stupid_random_ports[]={htons(1000),htons(1001),htons(1002),htons(1003)};
 int _connect(int sock, const struct sockaddr *addr, int addr_len)
 {
 	struct sockaddr_in *addrin=(struct sockaddr_in*)addr;
 	struct file *f=current_process->fds[sock];
+	struct socket* s=(struct socket*)f;
 	if(!f || !f->inode) return -EBADF;
 	struct network_device *dev=f->inode->device;
 	if(!dev) return -ENOTSOCK;
@@ -457,14 +465,15 @@ int _connect(int sock, const struct sockaddr *addr, int addr_len)
 		const struct arp_packet p=arp_request(dev, dest_ip);
 		dev->n_act->tx(f, &p, sizeof(struct arp_packet));
 		while(!arp_find_mac(dest_ip, mac)) sched_yield();
-		__asm__ volatile("cli;");
 	}
 	struct tcp_packet p;
-	tcp_build_packet(dev, mac, addrin, &p, NULL);
-	p.tcp_header.SYN=1;
-	p.tcp_header.seq_no=0;
+	struct tcp_opts opts={
+		.SYN=1
+	};
+	tcp_build_packet(dev, mac, addrin, &p, &opts, NULL, 0);
+	p.tcp_header.port_src=stupid_random_ports[stupid_random_ports_ptr++];
 	p.tcp_header.ack_no=0;
-	p.tcp_header.checksum=tcp_checksum(&p);
+	p.tcp_header.checksum=tcp_checksum(&p, 0);
 	bool exists=false;
 	list_foreach(open_sockets, volatile struct socket, sock)
 	{
@@ -477,19 +486,21 @@ int _connect(int sock, const struct sockaddr *addr, int addr_len)
 	if(!exists)
 	{
 		struct socket* os=(struct socket*)open_sockets;
-		struct socket* s=(struct socket*)f;
 		s->saddr=*addrin;
 		s->state=CONNECTING;
 		s->seq_no=p.tcp_header.seq_no;
 		s->ack_no=p.tcp_header.ack_no;
 		s->src_port=p.tcp_header.port_src;
+		memcpy(s->dst_mac, mac, 6);
 		if(open_sockets){list_add(os, s);}
 		else open_sockets=s;
 		s->list.next=NULL;
-		kprintf("!! ADDED TO LIST %x\n", open_sockets);
 	}
 	dev->n_act->tx(f, &p, sizeof(struct tcp_packet));
-	return 0;
+	while(s->state==CONNECTING) sched_yield();
+	if(s->state==CONNECTED) return 0;
+	_close(sock);
+	return -ECONNREFUSED;
 }
 
 void syscall(void *v)

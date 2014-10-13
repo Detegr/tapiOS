@@ -86,13 +86,15 @@ struct arp_packet arp_request(struct network_device *dev, uint32_t target_ip)
 
 bool arp_find_mac(uint32_t dest_ip, uint8_t *to)
 {// Assuming that 'to' has at least 6 bytes of space
+	bool ret=false;
 	list_foreach(arp_cache, volatile struct ip_mac_pair, entry)
 	{
 		if(entry->ip == dest_ip)
 		{
 			memcpy(to, (const void*)entry->mac, 6);
-			return true;
+			ret=true;
+			break;
 		}
 	}
-	return false;
+	return ret;
 }

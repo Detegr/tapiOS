@@ -32,8 +32,7 @@ SOURCES= terminal/vga.c      \
 		network/tcp.c       \
 		network/arp.c       \
 		network/socket.c    \
-		util/list.c			\
-		util/lock.c
+		util/list.c
 ASM_OBJECTS=$(ASM_SOURCES:.s=.o)
 OBJECTS=$(SOURCES:.c=.o)
 DEPS=$(SOURCES:.c=.d)

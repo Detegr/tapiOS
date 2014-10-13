@@ -38,11 +38,6 @@ static ssize_t rtl8139_tx(struct file *f, const void *data, size_t len)
 	}
 	if(data==NULL) return -1;
 	memcpy(rtl->tx_buf[rtl->tx_pos], data, len);
-	if(len<60)
-	{// Pad with zeros until the length is long enough
-		memset(rtl->tx_buf[rtl->tx_pos] + len, 0, 60-len);
-		len=60;
-	}
 	outdw(rtl->io_base+TXBUF + (4*rtl->tx_pos), vaddr_to_physaddr((vaddr_t)rtl->tx_buf[rtl->tx_pos]));
 	// Clears the OWN bit and sets the length,
 	// sets the early transmit treshold to 8 bytes
@@ -79,10 +74,11 @@ static void rtl8139_isr(void *rtl_dev, struct registers *regs)
 			rtl->rx_pos%=0x2000;
 		}
 	}
+	/*
 	if(status & TOK)
 	{
 		kprintf("Transmit OK\n");
-	}
+	}*/
 }
 
 static void populate_netdev(struct pci_device *pdev, struct network_device *dev)
