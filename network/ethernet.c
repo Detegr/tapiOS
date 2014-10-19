@@ -11,7 +11,7 @@ void ethernet_handle_frame(struct network_device *dev, uint8_t *data, size_t len
 	switch(htons(ehdr->ethertype))
 	{
 		case IPV4:
-			ipv4_handle_frame(dev, data + sizeof(struct ethernet_header), len);
+			ipv4_handle_frame(dev, (struct ethernet_header*)data, (struct ipv4_header*)(data + sizeof(struct ethernet_header)), len);
 			return;
 		case ARP:
 			arp_handle_frame(dev, data + sizeof(struct ethernet_header), len);

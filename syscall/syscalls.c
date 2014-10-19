@@ -403,13 +403,9 @@ int _poll(struct pollfd *fds, nfds_t nfds, int timeout)
 	int ret=0;
 	for(nfds_t i=0; i<nfds; ++i)
 	{
-		if(fds[i].fd < 0) {fds[i].revents=-1; continue;}
+		fds[i].revents=0;
+		if(fds[i].fd < 0) continue;
 		struct file *f=current_process->fds[fds[i].fd];
-		if(!f)
-		{
-			fds[i].revents=-1;
-			continue;
-		}
 		ret += vfs_poll(f, fds[i].events, &fds[i].revents);
 	}
 	return ret;
@@ -444,6 +440,8 @@ int _socket(int domain, int type, int protocol)
 	 * by the userspace program. */
 	f->refcount=2;
 	f->inode=inode;
+	f->pos=0;
+	f->rcvbuf=kmalloc(TCP_RCVBUF_SIZE);
 	return newfd((struct file*)f);
 }
 

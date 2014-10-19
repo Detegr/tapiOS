@@ -27,6 +27,11 @@ uint16_t tcp_checksum(struct tcp_packet *p, size_t data_len)
 	{
 		tmp+=ptr[i];
 	}
+	if(tcpsize % 2)
+	{
+		uint8_t *uptr=(uint8_t*)ptr;
+		tmp+=(uint16_t)(uptr[tcpsize-1] & 0x00FF);
+	}
 	uint16_t *u16ptr=(uint16_t*)&tmp;
 	return ~(u16ptr[0] + u16ptr[1]);
 }
@@ -46,7 +51,7 @@ void tcp_build_packet(struct network_device *dev, const uint8_t *dest_mac, const
 	p->ipv4_header.identification=0;
 	p->ipv4_header.flags=0;
 	p->ipv4_header.fragment_offset=0;
-	p->ipv4_header.length=htons((p->ipv4_header.IHL*4) + sizeof(struct tcp_header) + data_len); // TODO: Length
+	p->ipv4_header.length=htons((p->ipv4_header.IHL*4) + sizeof(struct tcp_header) + data_len);
 	p->ipv4_header.src_ip=htonl(MY_IP); // TODO
 	p->ipv4_header.dest_ip=dest_addrin->sin_addr; // Already in network byte order
 	p->ipv4_header.protocol=TCP_PROTOCOL_NUMBER;
@@ -59,7 +64,7 @@ void tcp_build_packet(struct network_device *dev, const uint8_t *dest_mac, const
 	if(opts) p->tcp_header.opts=*opts;
 	p->tcp_header.port_dst=dest_addrin->sin_port;
 	p->tcp_header.opts.offset=5; // Minimum
-	p->tcp_header.window_size=htons(1024);
+	p->tcp_header.window_size=htons(8192);
 	p->tcp_header.urgent_ptr=0;
 	p->tcp_header.seq_no=(uint32_t)rand();
 
@@ -76,7 +81,6 @@ void tcp_send_packet(struct network_device *dev, struct socket *s, uint32_t seq_
 	p.tcp_header.checksum=tcp_checksum(&p, 0);
 	s->seq_no=seq_no;
 	s->ack_no=ack_no;
-
 	// TODO: These fake structs are ugly :(
 	struct inode i={
 		.device=dev
@@ -120,18 +124,16 @@ static struct socket *tcp_remove_connection(struct ipv4_header *iph, struct tcp_
 	return (struct socket*)sock;
 }
 
-void tcp_handle_frame(struct network_device *dev, struct ipv4_header *iph, struct tcp_header *tcph, size_t len)
+void tcp_handle_frame(struct network_device *dev, struct ethernet_header *ethh, struct ipv4_header *iph, struct tcp_header *tcph, size_t len)
 {
-	tcp_dump_header(tcph);
+	//tcp_dump_header(tcph);
 	if(tcph->opts.RST)
 	{
 		struct socket *s=tcp_remove_connection(iph, tcph);
 		if(s)
 		{
-			kprintf("Connection removed\n");
-			s->refcount--;
-			if(s->refcount) kprintf("Tried to free a socket that has refcount %d!\n", s->refcount);
-			else kfree(s);
+			//kprintf("Connection removed\n");
+			socket_free(s);
 		}
 		else kprintf("!! No connection found. Spurious reset\n");
 	}
@@ -156,18 +158,20 @@ void tcp_handle_frame(struct network_device *dev, struct ipv4_header *iph, struc
 			sock->state=CONNECTED;
 		}
 		else if((tcph->opts.FIN && sock->state==FIN_WAIT2) ||
-				(tcph->opts.FIN && tcph->opts.ACK && sock->state==FIN_WAIT1))
+				(tcph->opts.FIN && tcph->opts.ACK && sock->state==FIN_WAIT1) ||
+				(tcph->opts.ACK && sock->state==LAST_ACK))
 		{
-			uint32_t ack_no=tcph->seq_no + htonl(1U);
-			tcp_send_packet(dev, sock, tcph->ack_no, ack_no, &ack);
+			if(sock->state != LAST_ACK)
+			{
+				uint32_t ack_no=tcph->seq_no + htonl(1U);
+				tcp_send_packet(dev, sock, tcph->ack_no, ack_no, &ack);
+			}
 			struct socket *s=tcp_remove_connection(iph, tcph);
 			if(s)
 			{
-				kprintf("Connection removed\n");
+				//kprintf("Connection removed\n");
 				s->state=DISCONNECTED;
-				s->refcount--;
-				if(s->refcount) kprintf("Tried to free a socket that has refcount %d!\n", s->refcount);
-				else kfree(s);
+				socket_free(s);
 			}
 			else kprintf("!! No connection found. Spurious reset\n");
 		}
@@ -175,10 +179,63 @@ void tcp_handle_frame(struct network_device *dev, struct ipv4_header *iph, struc
 		{
 			sock->state=FIN_WAIT2;
 		}
+		else if(tcph->opts.FIN && sock->state==CONNECTED)
+		{
+			struct tcp_opts close={
+				.FIN=1
+			};
+			uint32_t ack_no=sock->ack_no;
+			if(tcph->opts.ACK)
+			{
+				close.ACK=1;
+				ack_no=htonl(htonl(sock->ack_no)+1);
+			}
+			tcp_send_packet(dev, sock, sock->seq_no, ack_no, &close);
+			sock->state=LAST_ACK;
+		}
 		else if(tcph->opts.ACK)
 		{
-			sock->seq_no=tcph->ack_no;
-			sock->ack_no=tcph->seq_no;
+			uint32_t datalen=htons(iph->length) - sizeof(struct ipv4_header) - sizeof(struct tcp_header);
+			if(datalen>0)
+			{
+				uint8_t *dp=(uint8_t*)tcph + sizeof(struct tcp_header);
+				for(int i=0; i<datalen; ++i)
+				{
+					if(sock->pos<TCP_RCVBUF_SIZE)
+					{
+						sock->rcvbuf[sock->pos++] = dp[i];
+					}
+				}
+				sock->seq_no=tcph->ack_no;
+				sock->ack_no = htonl(htonl(tcph->seq_no) + datalen);
+				tcp_send_packet(dev, sock, sock->seq_no, sock->ack_no, &ack);
+			}
 		}
+	}
+	else if(tcph->opts.SYN)
+	{
+		// Send RST if there is no socket for this port
+		struct tcp_opts rst={
+			.RST=1,
+			.ACK=1
+		};
+		struct tcp_packet p;
+		struct sockaddr_in saddr;
+		saddr.sin_addr=iph->src_ip;
+		saddr.sin_port=tcph->port_src;
+		tcp_build_packet(dev, ethh->mac_src, &saddr, &p, &rst, NULL, 0);
+		p.tcp_header.port_dst=tcph->port_src;
+		p.tcp_header.port_src=tcph->port_dst;
+		p.tcp_header.seq_no=0;
+		p.tcp_header.ack_no=htonl(htonl(tcph->seq_no)+1);
+		p.tcp_header.checksum=tcp_checksum(&p, 0);
+		// TODO: These fake structs are ugly :(
+		struct inode i={
+			.device=dev
+		};
+		struct file f={
+			.inode=&i
+		};
+		dev->n_act->tx(&f, &p, sizeof(struct tcp_packet));
 	}
 }

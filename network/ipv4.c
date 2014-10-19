@@ -15,11 +15,10 @@ uint16_t ipv4_checksum(struct ipv4_header *h)
 	return ~(u16ptr[0] + u16ptr[1]);
 }
 
-void ipv4_handle_frame(struct network_device *dev, uint8_t *data, size_t len)
+void ipv4_handle_frame(struct network_device *dev, struct ethernet_header *ethh, struct ipv4_header *ipvh, size_t len)
 {
-	struct ipv4_header *h=(struct ipv4_header*)data;
-	if(h->protocol==TCP_PROTOCOL_NUMBER)
+	if(ipvh->protocol==TCP_PROTOCOL_NUMBER)
 	{
-		tcp_handle_frame(dev, h, (struct tcp_header*)(data + sizeof(struct ipv4_header)), len);
+		tcp_handle_frame(dev, ethh, ipvh, (struct tcp_header*)((uint8_t*)ipvh + sizeof(struct ipv4_header)), len);
 	}
 }

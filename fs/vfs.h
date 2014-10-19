@@ -16,7 +16,7 @@ struct inode
 	char name[256];
 	void *superblock;
 	struct inode_actions *i_act;
-	struct file_actions *f_act;
+	struct file_actions *f_act; // TODO: Move this to struct file
 
 	struct inode *mountpoint;
 

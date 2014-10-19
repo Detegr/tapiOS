@@ -3,6 +3,7 @@
 
 #include <util/util.h>
 #include "netdev.h"
+#include "ethernet.h"
 
 struct ipv4_header
 {
@@ -28,6 +29,6 @@ struct ipv4_header
 } __attribute__((packed));
 
 uint16_t ipv4_checksum(struct ipv4_header *h);
-void ipv4_handle_frame(struct network_device *dev, uint8_t *data, size_t len);
+void ipv4_handle_frame(struct network_device *dev, struct ethernet_header *ethh, struct ipv4_header *ipvh, size_t len);
 
 #endif
