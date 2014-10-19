@@ -60,6 +60,30 @@ static const char *handle_escape(const char *str)
 		else if(col==0) bold=false;
 		return outstr;
 	}
+	elems=ksscanf(str, "\033[%uA", &outstr, &col);
+	if(elems==1 && outstr)
+	{
+		move_cursor(-col,0);
+		return outstr;
+	}
+	elems=ksscanf(str, "\033[%uB", &outstr, &col);
+	if(elems==1 && outstr)
+	{
+		move_cursor(col,0);
+		return outstr;
+	}
+	elems=ksscanf(str, "\033[%uC", &outstr, &col);
+	if(elems==1 && outstr)
+	{
+		move_cursor(0, col);
+		return outstr;
+	}
+	elems=ksscanf(str, "\033[%uD", &outstr, &col);
+	if(elems==1 && outstr)
+	{
+		move_cursor(0,-col);
+		return outstr;
+	}
 	if(strncmp(str, "\033[H", 3) == 0)
 	{
 		set_cursor(0, 0);
