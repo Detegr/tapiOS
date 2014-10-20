@@ -9,7 +9,7 @@
 #define ARP 0x0806
 
 // TODO: Read these from a config file of some sort
-#define MY_IP 0x14000003
+#define MY_IP 0x14000002
 //#define MY_IP 0xc0a801c9
 #define SUBNET_MASK 0xFFFFFF00
 //#define DEFAULT_GW 0xc0a80101
