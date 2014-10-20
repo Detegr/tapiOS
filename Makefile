@@ -52,7 +52,7 @@ kernel: $(ASM_OBJECTS) $(OBJECTS)
 	ld -T boot/link.ld $^ -o tapios/boot/kernel.bin $(LFLAGS)
 	grub-mkrescue -d/usr/lib/grub/i386-pc -o tapios.iso tapios
 userspace:
-	make -C usr
+	make -C userspace
 	make iso
 %.o : %.c
 	$(CC) $(CFLAGS) -c $< -o $@
