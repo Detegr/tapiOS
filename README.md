@@ -10,7 +10,7 @@ Just don't. Makefile has hardcoded paths to cross compiler etc. and all the user
 ## Build tricks
 Various flags and tricks for building things to tapiOS documented here.
 
-- configure: `LDFLAGS=usr/tapios.ld`
+- configure: `LDFLAGS=userspace/tapios.ld`
 - newlib: `CFLAGS=-D_I386MACH_ALLOW_HW_INTERRUPTS --enable-newlib-nano-malloc`
 - dash: `#undef _GNU_SOURCE` to config.h
 - ncurses: `--with-build-cc=gcc --without-cxx`
