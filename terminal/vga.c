@@ -7,6 +7,11 @@ volatile uint8_t* video = (uint8_t*)0xC00B8000;
 static uint8_t col=0;
 static uint8_t row=25;
 
+// These are 1-25 in the actual terminal
+// but used as 0-24 for convenience
+static uint8_t scroll_buffer_start = 0;
+static uint8_t scroll_buffer_end = 24;
+
 void hide_cursor(void)
 {
 	uint16_t pos=(100*80) + 200;
@@ -66,6 +71,17 @@ void cls_from_cursor_down(void)
 		}
 	}
 }
+void cls_from_cursor_to_row(uint8_t torow)
+{
+	for(int y=row; y<=torow; ++y)
+	{
+		for(int x=col; x<160; x+=2)
+		{
+			*(video+(y*160)+x)=' ';
+			*(video+(y*160)+x+1)=0x07;
+		}
+	}
+}
 void cls_from_cursor_to_eol(void)
 {
 	for(int x=col; x<160; x+=2)
@@ -104,9 +120,9 @@ static void printchar(const char c, uint8_t color, bool bold)
 			row++;
 		}
 	}
-	if(row>24)
+	if(row>scroll_buffer_end)
 	{ // Scroll the buffer
-		row=24;
+		row=scroll_buffer_end;
 		scroll(1);
 		cls_from_cursor_to_eol();
 	}
@@ -114,13 +130,20 @@ static void printchar(const char c, uint8_t color, bool bold)
 
 void scroll(int rows)
 {
+	uint8_t *v = (uint8_t*)video;
+	uint16_t scroll_area = (scroll_buffer_end - scroll_buffer_start) * 160;
+	uint16_t amount = min(rows * 160, scroll_area);
 	if(rows>0)
 	{
-		memmove((uint8_t*)video, ((uint8_t*)video)+(rows*160), 25*160);
+		memmove(v + (scroll_buffer_start * 160),
+				v + (scroll_buffer_start * 160) + amount,
+				scroll_area - amount);
 	}
 	else
 	{
-		memmove((uint8_t*)video+(-rows*160), (uint8_t*)video, 25*160);
+		memmove(v + (scroll_buffer_start * 160),
+				v + (scroll_buffer_end * 160) - amount,
+				scroll_area - amount);
 	}
 }
 
@@ -263,4 +286,10 @@ int get_cursor_row(void)
 int get_cursor_col(void)
 {
 	return col;
+}
+
+void set_scroll_area(uint8_t start, uint8_t end)
+{
+	scroll_buffer_start = start - 1;
+	scroll_buffer_end = end - 1;
 }

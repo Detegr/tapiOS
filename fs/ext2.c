@@ -109,11 +109,6 @@ static ext2_inode* read_inode(const ext2_superblock* sb, int inode_index)
 	return &inode_table[index];
 }
 
-static inline uint32_t min(uint32_t a, uint32_t b)
-{
-	if(a<b) return a; else return b;
-}
-
 static struct dirent* ext2_readdir(struct inode *node)
 {
 	static ext2_directory *bdir=NULL;

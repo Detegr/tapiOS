@@ -8,6 +8,7 @@ volatile unsigned char* video;
 
 void cls(void);
 void cls_from_cursor_down(void);
+void cls_from_cursor_to_row(uint8_t torow);
 void cls_from_cursor_to_eol(void);
 void print_startup_info(const char* section, bool ok);
 void kprintf(const char* fmt, ...);
@@ -22,5 +23,6 @@ void delete_last_char(int,int);
 int get_cursor_row(void);
 int get_cursor_col(void);
 void scroll(int rows);
+void set_scroll_area(uint8_t start, uint8_t end);
 
 #endif

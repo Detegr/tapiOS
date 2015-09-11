@@ -38,7 +38,8 @@ static const char *handle_escape(const char *str)
 	elems=ksscanf(str, "\033[%u;%ur", &outstr, &row, &col);
 	if(elems==2 && outstr)
 	{
-		// Set scrolling area to (row, col)
+		// Row and col here are actually start and end rows
+		set_scroll_area(row, col);
 		return outstr;
 	}
 	elems=ksscanf(str, "\033[%uC", &outstr, &col);

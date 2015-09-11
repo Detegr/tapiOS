@@ -220,6 +220,11 @@ inline int max(int a, int b)
 	return a > b ? a : b;
 }
 
+inline int min(int a, int b)
+{
+	return a < b ? a : b;
+}
+
 inline int isdigit(const char c)
 {
 	return c >= 48 && c <= 57;

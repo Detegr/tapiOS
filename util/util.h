@@ -54,6 +54,7 @@ char *basename(char *path); /* GNU version */
 char *dirname(char *path);
 extern uint32_t _get_eip(void);
 int max(int a, int b);
+int min(int a, int b);
 
 int ksscanf(const char *str, const char *fmt, char **outstr, ...);
 int isdigit(const char c);
