@@ -131,18 +131,21 @@ static void printchar(const char c, uint8_t color, bool bold)
 void scroll(int rows)
 {
 	uint8_t *v = (uint8_t*)video;
-	uint16_t scroll_area = (scroll_buffer_end - scroll_buffer_start) * 160;
-	uint16_t amount = min(rows * 160, scroll_area);
+	uint16_t scroll_area = (scroll_buffer_end - scroll_buffer_start + 1) * 160;
+	uint16_t amount = min(abs(rows) * 160, scroll_area);
+	uint16_t bufstart = scroll_buffer_start * 160;
+	uint16_t bufend = scroll_buffer_end * 160;
+	if(scroll_area < amount) PANIC();
 	if(rows>0)
 	{
-		memmove(v + (scroll_buffer_start * 160),
-				v + (scroll_buffer_start * 160) + amount,
+		memmove(v + bufstart,
+				v + bufstart + amount,
 				scroll_area - amount);
 	}
 	else
 	{
-		memmove(v + (scroll_buffer_start * 160),
-				v + (scroll_buffer_end * 160) - amount,
+		memmove(v + bufstart + amount,
+				v + bufstart,
 				scroll_area - amount);
 	}
 }
@@ -290,6 +293,7 @@ int get_cursor_col(void)
 
 void set_scroll_area(uint8_t start, uint8_t end)
 {
+	if(start > end || start == 0 || end >= 25) PANIC();
 	scroll_buffer_start = start - 1;
 	scroll_buffer_end = end - 1;
 }
