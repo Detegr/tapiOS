@@ -23,6 +23,6 @@ struct sockaddr_in
 };
 
 int socket(int,int,int);
-int connect(int,struct sockaddr*,int);
+int connect(int,const struct sockaddr*,int);
 
 #endif

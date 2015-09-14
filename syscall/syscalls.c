@@ -4,7 +4,6 @@
 #include <terminal/vga.h>
 #include <irq/irq.h>
 #include <util/scancodes.h>
-#include <task/process.h>
 #include <mem/kmalloc.h>
 #include <fs/vfs.h>
 #include <task/processtree.h>
@@ -45,6 +44,7 @@ int _poll(struct pollfd *fds, nfds_t nfds, int timeout);
 int _mkdir(const char* path, mode_t mode);
 int _socket(int domain, int type, int protocol);
 int _connect(int sock, const struct sockaddr *addr, int addr_len);
+int _kill(pid_t pid, int sig);
 
 typedef int(*syscall_ptr)();
 syscall_ptr syscalls[]={
@@ -52,7 +52,7 @@ syscall_ptr syscalls[]={
 	&_open, &_dup2, &_readdir,
 	&fork, &_waitpid, &_exec, &_fcntl, &getpid, &_fstat,
 	&_getcwd, &_chdir, &_close, &_ioctl, &_poll, &_mkdir, &_socket,
-	&_connect
+	&_connect, &_kill
 };
 
 int _exit(int code)
@@ -498,6 +498,12 @@ int _connect(int sock, const struct sockaddr *addr, int addr_len)
 	if(s->state==CONNECTED) return 0;
 	_close(sock);
 	return -ECONNREFUSED;
+}
+
+int _kill(pid_t pid, int sig)
+{
+	kprintf("kill(%d, %d)\n", pid, sig);
+	return -EINVAL;
 }
 
 void syscall(void *v)

@@ -4,9 +4,9 @@
 #include <sys/times.h>
 #include <sys/time.h>
 #include <sys/poll.h>
+#include <sys/signal.h>
 #include <errno.h>
 #include <stdio.h>
-#include <signal.h>
 #include <stdlib.h>
 #include <stdarg.h>
 
@@ -36,6 +36,11 @@
 #define MKDIR 19
 #define SOCKET 20
 #define CONNECT 21
+#define KILL 22
+
+#define SYSCALL0_NO_RET(n) \
+	int ret; \
+	__asm__ volatile("int $0x80;" : "=a"(ret) : "0"(n));
 
 #define SYSCALL0(n) \
 	int ret; \
@@ -126,7 +131,7 @@ int access(const char *pathname, int mode)
 
 void _exit()
 {
-	SYSCALL0(EXIT);
+	SYSCALL0_NO_RET(EXIT);
 }
 int close(int fd)
 {
@@ -151,7 +156,7 @@ int isatty(int file)
 }
 int kill(int pid, int sig)
 {
-	return -1;
+	SYSCALL2(KILL, pid, sig);
 }
 int lseek(int file, int ptr, int dir)
 {
@@ -181,7 +186,9 @@ int stat(const char *path, struct stat *st)
 	errno=0;
 	return ret;
 }
-clock_t times(struct tms *buf);
+clock_t times(struct tms *buf)
+{
+}
 int write(int file, char *ptr, int len)
 {
 	SYSCALL3(WRITE, file, ptr, len);
