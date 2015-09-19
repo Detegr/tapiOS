@@ -1,0 +1,11 @@
+--- binutils_orig/gas/configure.tgt	2015-09-19 13:54:19.267584063 +0300
++++ binutils-2.25/gas/configure.tgt	2015-09-19 14:06:41.031287867 +0300
+@@ -475,6 +475,8 @@
+   *-*-aros*)				fmt=elf em=linux ;;
+   *-*-vxworks* | *-*-windiss)		fmt=elf em=vxworks ;;
+   *-*-netware)				fmt=elf em=netware ;;
++
++  i386-*-tapios*) fmt=elf ;;
+ esac
+ 
+ case ${cpu_type} in

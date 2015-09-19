@@ -1,0 +1,21 @@
+--- binutils_orig/ld/Makefile.am	2015-09-19 13:54:19.550929278 +0300
++++ binutils-2.25/ld/Makefile.am	2015-09-19 14:15:17.311715207 +0300
+@@ -270,6 +270,7 @@
+ 	eelf32xstormy16.c \
+ 	eelf32xtensa.c \
+ 	eelf_i386.c \
++	eelf_i386_tapios.c \
+ 	eelf_i386_be.c \
+ 	eelf_i386_chaos.c \
+ 	eelf_i386_fbsd.c \
+@@ -1255,6 +1256,10 @@
+ eelf_i386.c: $(srcdir)/emulparams/elf_i386.sh \
+   $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
+ 
++eelf_i386_tapios.c: $(srcdir)/emulparams/elf_i386_tapios.sh \
++  $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
++	${GENSCRIPTS} elf_i386_tapios "$(tdir_elf_i386_tapios)"
++
+ eelf_i386_be.c: $(srcdir)/emulparams/elf_i386_be.sh \
+   $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
+ 

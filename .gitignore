@@ -5,3 +5,5 @@ kernel
 a.out
 *.iso
 *.d
+cross/
+build-tmp/

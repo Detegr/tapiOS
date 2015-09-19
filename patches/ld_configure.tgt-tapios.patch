@@ -1,0 +1,13 @@
+--- binutils_orig/ld/configure.tgt	2015-09-19 13:54:19.547595805 +0300
++++ binutils-2.25/ld/configure.tgt	2015-09-19 14:09:29.694682906 +0300
+@@ -774,6 +774,10 @@
+ 			;;
+ *-tandem-none)		targ_emul=st2000
+ 			;;
++i[3-7]86-*-tapios*)
++			targ_emul=elf_i386_tapios
++			targ_extra_emuls=elf_i386
++			;;
+ *)
+   echo 2>&1 "*** ld does not support target ${targ}"
+   echo 2>&1 "*** see ld/configure.tgt for supported targets"

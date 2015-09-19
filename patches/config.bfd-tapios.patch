@@ -1,0 +1,13 @@
+--- binutils_orig/bfd/config.bfd	2015-09-19 17:30:21.375044540 +0300
++++ binutils-2.25/bfd/config.bfd	2015-09-19 17:30:48.739089559 +0300
+@@ -166,6 +166,10 @@
+     ;;
+ 
+ # START OF targmatch.h
++  i[3-7]86-*-tapios*)
++    targ_defvec=i386_elf32_vec
++    targ_selvecs=
++    ;;
+ #ifdef BFD64
+   aarch64-*-elf)
+     targ_defvec=aarch64_elf64_le_vec
